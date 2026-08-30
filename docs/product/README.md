@@ -1,6 +1,6 @@
-# 产品文档状态
+# 产品文档
 
-`TaxMind-Pro-MVP-PRD.md` 当前未提供。第一批只实现不包含税务业务判断的工程基座。
+- [TaxMind Pro 产品需求与功能规格说明书（MVP）](TaxMind-Pro-MVP-PRD.md)
 
-开始 Identity、Cases、Knowledge、FAQ、Procedure、Risk 或 GraphRAG 业务模块前，必须补充 PRD，
-或由用户再次明确确认以现有技术设计中的范围和验收目标为准。
+产品需求已归档。后续 Identity、Cases、Knowledge、FAQ、Procedure、Risk 或 GraphRAG 业务模块，
+必须以 PRD 定义的用户边界、P0 范围、验收指标和明确排除项为准。

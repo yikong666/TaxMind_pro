@@ -61,7 +61,6 @@ pnpm --filter @taxmind/web dev
 - [技术开发设计](docs/architecture/TaxMind-Pro-Development-Design.md)
 - [系统架构图](docs/architecture/taxmind-pro-system-architecture.html)
 - [脚手架与文件契约](docs/development/TaxMind-Pro-Project-Scaffold-Spec.md)
+- [MVP 产品需求与功能规格（PRD）](docs/product/TaxMind-Pro-MVP-PRD.md)
 - [本地开发手册](docs/runbooks/local-development.md)
 - [变更记录](docs/CHANGELOG.md)
-
-产品 PRD 尚未归档。进入 Identity、Cases、Knowledge、Risk 等业务模块前必须补齐或再次确认范围。
