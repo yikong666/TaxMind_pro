@@ -1,0 +1,13 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://taxmind.example/schemas/v1/evidence-bundle.schema.json",
+  "title": "EvidenceBundle",
+  "description": "Bootstrap placeholder; evidence fields are finalized with the retrieval module.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "evidence"],
+  "properties": {
+    "schema_version": {"const": 1},
+    "evidence": {"type": "array", "items": {"type": "object"}}
+  }
+}

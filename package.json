@@ -1,0 +1,17 @@
+{
+  "name": "taxmind-pro",
+  "private": true,
+  "packageManager": "pnpm@11.14.0",
+  "engines": {
+    "node": ">=24 <25",
+    "pnpm": ">=11 <12"
+  },
+  "scripts": {
+    "dev:web": "corepack pnpm --filter @taxmind/web dev",
+    "build:web": "corepack pnpm --filter @taxmind/web build",
+    "lint:web": "corepack pnpm --filter @taxmind/web lint",
+    "test:web": "corepack pnpm --filter @taxmind/web test",
+    "typecheck:web": "corepack pnpm --filter @taxmind/web typecheck",
+    "generate:client": "corepack pnpm --filter @taxmind/web generate:types"
+  }
+}

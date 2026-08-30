@@ -1,0 +1,13 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://taxmind.example/schemas/v1/generation-output.schema.json",
+  "title": "GenerationOutput",
+  "description": "Bootstrap placeholder; no tax conclusion contract is implemented in phase one.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "review_required"],
+  "properties": {
+    "schema_version": {"const": 1},
+    "review_required": {"const": true}
+  }
+}

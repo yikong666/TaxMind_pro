@@ -1,0 +1,13 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://taxmind.example/schemas/v1/risk-rule.schema.json",
+  "title": "RiskRuleExpression",
+  "description": "Placeholder contract. Business operators are added only with the governed rule module.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "expression"],
+  "properties": {
+    "schema_version": {"const": 1},
+    "expression": {"type": "object"}
+  }
+}

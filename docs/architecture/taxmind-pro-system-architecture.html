@@ -1,0 +1,799 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>TaxMind Pro 系统架构图</title>
+  <style>
+    :root {
+      --page-bg: #f3f6fb;
+      --sheet: #ffffff;
+      --ink: #172033;
+      --muted: #5f6b7a;
+      --line: #315d9e;
+      --line-soft: #89a2c8;
+      --green: #2f7f6a;
+      --orange: #bb6b26;
+      --border: #d8e0ec;
+      --blue-bg: #edf4ff;
+      --cyan-bg: #edf9fb;
+      --green-bg: #edf8f3;
+      --amber-bg: #fff7e8;
+      --violet-bg: #f5f0ff;
+      --slate-bg: #f6f8fb;
+      --danger-bg: #fff0f0;
+      --shadow: 0 14px 42px rgba(39, 63, 103, .09);
+    }
+
+    * { box-sizing: border-box; }
+
+    html { background: var(--page-bg); }
+
+    body {
+      margin: 0;
+      color: var(--ink);
+      background:
+        linear-gradient(180deg, #f8faff 0, var(--page-bg) 520px),
+        var(--page-bg);
+      font-family: "PingFang SC", "Microsoft YaHei", "Noto Sans CJK SC", Arial, sans-serif;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    .document {
+      width: min(1840px, calc(100% - 40px));
+      margin: 28px auto 60px;
+    }
+
+    .hero {
+      padding: 32px 38px 26px;
+      background: var(--sheet);
+      border: 1px solid var(--border);
+      box-shadow: var(--shadow);
+    }
+
+    .eyebrow {
+      margin: 0 0 8px;
+      color: #456a9f;
+      font-size: 14px;
+      letter-spacing: .14em;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: clamp(28px, 3vw, 43px);
+      font-weight: 650;
+      letter-spacing: -.03em;
+    }
+
+    .subtitle {
+      max-width: 1180px;
+      margin: 12px 0 0;
+      color: var(--muted);
+      font-size: 17px;
+      line-height: 1.75;
+    }
+
+    .legend {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 18px 28px;
+      margin-top: 20px;
+      color: var(--muted);
+      font-size: 14px;
+    }
+
+    .legend-item { display: inline-flex; align-items: center; gap: 8px; }
+    .legend-line { width: 38px; height: 0; border-top: 3px solid var(--line); }
+    .legend-line.green { border-color: var(--green); }
+    .legend-line.orange { border-top-style: dashed; border-color: var(--orange); }
+
+    .sheet {
+      margin-top: 22px;
+      padding: 26px 26px 32px;
+      background: var(--sheet);
+      border: 1px solid var(--border);
+      box-shadow: var(--shadow);
+      break-inside: avoid;
+    }
+
+    .section-head {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: 20px;
+      margin: 0 8px 18px;
+    }
+
+    h2 { margin: 0; font-size: 23px; font-weight: 650; }
+    .section-note { margin: 0; color: var(--muted); font-size: 14px; }
+
+    .diagram-wrap {
+      width: 100%;
+      overflow-x: auto;
+      border-top: 1px solid #edf1f6;
+      padding-top: 18px;
+    }
+
+    svg {
+      display: block;
+      width: 100%;
+      min-width: 1180px;
+      height: auto;
+      margin: 0 auto;
+      font-family: inherit;
+    }
+
+    .layer-frame { fill: #fbfcfe; stroke: #d7e0ec; stroke-width: 1.5; }
+    .node { stroke-width: 1.5; }
+    .node.blue { fill: #edf4ff; stroke: #9ab7e1; }
+    .node.cyan { fill: #edf9fb; stroke: #93c9d1; }
+    .node.green { fill: #edf8f3; stroke: #9acdbd; }
+    .node.amber { fill: #fff7e8; stroke: #e3bd7e; }
+    .node.violet { fill: #f5f0ff; stroke: #bca9df; }
+    .node.slate { fill: #f6f8fb; stroke: #c7d0dc; }
+    .node.danger { fill: #fff0f0; stroke: #e3abab; }
+    .node.white { fill: #fff; stroke: #c9d4e3; }
+    .band { fill: #eef3f9; stroke: #cbd7e5; stroke-width: 1.3; }
+    .band.blue { fill: #e5efff; stroke: #9cb8e1; }
+    .band.green { fill: #e4f4ee; stroke: #99c9b9; }
+    .band.amber { fill: #fff1d7; stroke: #dfb66f; }
+
+    .title-text { fill: #172033; font-size: 18px; font-weight: 650; }
+    .node-title { fill: #172033; font-size: 17px; font-weight: 650; }
+    .body-text { fill: #48576b; font-size: 13px; }
+    .small-text { fill: #607086; font-size: 12px; }
+    .tiny-text { fill: #607086; font-size: 11px; }
+    .layer-label { fill: #385a89; font-size: 13px; font-weight: 650; letter-spacing: .08em; }
+    .route-text { fill: #30445f; font-size: 12px; font-weight: 600; }
+    .label-bg { fill: #fff; stroke: #dbe3ee; stroke-width: 1; }
+
+    .arrow { fill: none; stroke: #315d9e; stroke-width: 2.4; marker-end: url(#arrow-blue); }
+    .arrow-green { fill: none; stroke: #2f7f6a; stroke-width: 2.4; marker-end: url(#arrow-green); }
+    .arrow-orange { fill: none; stroke: #bb6b26; stroke-width: 2.2; stroke-dasharray: 8 6; marker-end: url(#arrow-orange); }
+    .read-link { fill: none; stroke: #5d789e; stroke-width: 2; marker-start: url(#arrow-start); marker-end: url(#arrow-blue); }
+    .bus { fill: none; stroke: #89a2c8; stroke-width: 2; }
+    .write-bus { fill: none; stroke: #79a897; stroke-width: 2; }
+
+    .summary-grid {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 14px;
+      margin-top: 18px;
+    }
+
+    .summary-item {
+      padding: 17px 18px;
+      border: 1px solid var(--border);
+      background: #fbfcfe;
+    }
+
+    .summary-item h3 { margin: 0 0 7px; font-size: 16px; }
+    .summary-item p { margin: 0; color: var(--muted); font-size: 14px; line-height: 1.65; }
+
+    .storage-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 14px;
+      font-size: 14px;
+      line-height: 1.65;
+    }
+
+    .storage-table th,
+    .storage-table td {
+      padding: 14px 16px;
+      text-align: left;
+      vertical-align: top;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .storage-table th {
+      color: #385a89;
+      background: #f4f7fb;
+      font-weight: 650;
+    }
+
+    .storage-table td:first-child {
+      width: 12%;
+      font-weight: 650;
+      white-space: nowrap;
+    }
+
+    .storage-table td:nth-child(2) { width: 34%; }
+
+    .memory-chain {
+      display: grid;
+      grid-template-columns: 1fr 48px 1fr 48px 1fr 48px 1fr;
+      align-items: stretch;
+      gap: 8px;
+      margin-top: 22px;
+    }
+
+    .memory-node {
+      padding: 17px 18px;
+      border: 1px solid #b9cbe3;
+      background: #f6f9fd;
+    }
+
+    .memory-node strong { display: block; margin-bottom: 7px; font-size: 15px; }
+    .memory-node span { color: var(--muted); font-size: 13px; line-height: 1.55; }
+    .memory-arrow { display: grid; place-items: center; color: #315d9e; font-size: 28px; }
+
+    .chain-note {
+      margin: 20px 8px 0;
+      padding: 15px 18px;
+      color: #41516a;
+      background: #f6f9fd;
+      border-left: 4px solid #6f93c3;
+      font-size: 15px;
+      line-height: 1.75;
+    }
+
+    @media (max-width: 1050px) {
+      .document { width: calc(100% - 20px); margin-top: 10px; }
+      .hero, .sheet { padding-left: 18px; padding-right: 18px; }
+      .section-head { align-items: flex-start; flex-direction: column; }
+      .summary-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .memory-chain { grid-template-columns: 1fr; }
+      .memory-arrow { transform: rotate(90deg); min-height: 28px; }
+    }
+
+    @media (max-width: 620px) {
+      .summary-grid { grid-template-columns: 1fr; }
+      .legend { gap: 10px 18px; }
+    }
+
+    @media print {
+      @page { size: A3 landscape; margin: 10mm; }
+      body { background: #fff; }
+      .document { width: 100%; margin: 0; }
+      .hero, .sheet { box-shadow: none; border-color: #cad4e1; }
+      .sheet { page-break-before: always; }
+      .diagram-wrap { overflow: visible; }
+    }
+  </style>
+</head>
+<body>
+  <main class="document">
+    <header class="hero">
+      <p class="eyebrow">TAXMIND PRO · SYSTEM ARCHITECTURE</p>
+      <h1>税务知识图谱增强型智能咨询与风险审查平台</h1>
+      <p class="subtitle">面向税务师事务所、代理记账公司与财税咨询机构。架构由“离线知识生产链”和“在线专业问答链”组成，以统一证据主键连接原文、条款、向量索引、图谱关系、风险规则与审核记录。</p>
+      <div class="legend" aria-label="连线图例">
+        <span class="legend-item"><span class="legend-line"></span>在线请求、检索与回答</span>
+        <span class="legend-item"><span class="legend-line green"></span>离线数据加工与知识发布</span>
+        <span class="legend-item"><span class="legend-line orange"></span>审核、反馈与更新闭环</span>
+      </div>
+    </header>
+
+    <section class="sheet" aria-labelledby="overview-title">
+      <div class="section-head">
+        <h2 id="overview-title">01 · 总体主架构</h2>
+        <p class="section-note">八段主链路 · 在线请求从应用入口回到检索路由 · 全链路证据可追溯</p>
+      </div>
+      <div class="diagram-wrap">
+        <svg viewBox="0 0 1680 650" role="img" aria-labelledby="main-title main-desc">
+          <title id="main-title">TaxMind Pro 总体主架构</title>
+          <desc id="main-desc">从官方数据采集、数据处理、知识图谱构建、统一存储、检索路由、检索服务、生成问答到应用接口的完整链路。</desc>
+          <defs>
+            <marker id="arrow-blue" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto" markerUnits="strokeWidth"><path d="M0,0 L9,5 L0,10 Z" fill="#315d9e"/></marker>
+            <marker id="arrow-green" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto" markerUnits="strokeWidth"><path d="M0,0 L9,5 L0,10 Z" fill="#2f7f6a"/></marker>
+            <marker id="arrow-orange" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto" markerUnits="strokeWidth"><path d="M0,0 L9,5 L0,10 Z" fill="#bb6b26"/></marker>
+            <marker id="arrow-start" markerWidth="10" markerHeight="10" refX="2" refY="5" orient="auto" markerUnits="strokeWidth"><path d="M9,0 L0,5 L9,10 Z" fill="#5d789e"/></marker>
+          </defs>
+
+          <text x="24" y="34" class="layer-label">核心能力主链</text>
+
+          <rect x="24" y="65" width="188" height="232" rx="9" class="node green"/>
+          <text x="118" y="101" text-anchor="middle" class="node-title">① 数据采集</text>
+          <text x="42" y="137" class="body-text">
+            <tspan x="42" dy="0">官方白名单接入</tspan>
+            <tspan x="42" dy="25">低频增量采集</tspan>
+            <tspan x="42" dy="25">种子文件导入</tspan>
+            <tspan x="42" dy="25">变更监测与留痕</tspan>
+          </text>
+          <rect x="42" y="256" width="152" height="24" rx="4" class="band green"/>
+          <text x="118" y="273" text-anchor="middle" class="tiny-text">输出：原始政策资料</text>
+
+          <rect x="228" y="65" width="188" height="232" rx="9" class="node cyan"/>
+          <text x="322" y="101" text-anchor="middle" class="node-title">② 数据处理</text>
+          <text x="246" y="137" class="body-text">
+            <tspan x="246" dy="0">解析 / OCR / 清洗</tspan>
+            <tspan x="246" dy="25">去重与格式标准化</tspan>
+            <tspan x="246" dy="25">文号 / 地区 / 时效</tspan>
+            <tspan x="246" dy="25">章节条款父子分块</tspan>
+          </text>
+          <rect x="246" y="256" width="152" height="24" rx="4" class="band"/>
+          <text x="322" y="273" text-anchor="middle" class="tiny-text">输出：结构化条款</text>
+
+          <rect x="432" y="65" width="188" height="232" rx="9" class="node violet"/>
+          <text x="526" y="101" text-anchor="middle" class="node-title">③ 知识图谱</text>
+          <text x="450" y="137" class="body-text">
+            <tspan x="450" dy="0">实体与关系抽取</tspan>
+            <tspan x="450" dy="25">条件 / 排除组</tspan>
+            <tspan x="450" dy="25">引用 / 修改 / 废止</tspan>
+            <tspan x="450" dy="25">标准化、消歧、审核</tspan>
+          </text>
+          <rect x="450" y="256" width="152" height="24" rx="4" class="band"/>
+          <text x="526" y="273" text-anchor="middle" class="tiny-text">输出：可追溯关系</text>
+
+          <rect x="636" y="65" width="188" height="232" rx="9" class="node slate"/>
+          <text x="730" y="101" text-anchor="middle" class="node-title">④ 统一存储</text>
+          <text x="654" y="137" class="body-text">
+            <tspan x="654" dy="0">MySQL · 主库/长记忆</tspan>
+            <tspan x="654" dy="22">Milvus · 向量/FAQ</tspan>
+            <tspan x="654" dy="22">Neo4j · 图谱关系</tspan>
+            <tspan x="654" dy="22">MinIO · 原文与附件</tspan>
+            <tspan x="654" dy="22">Redis · 会话短期记忆</tspan>
+          </text>
+          <rect x="654" y="256" width="152" height="24" rx="4" class="band"/>
+          <text x="730" y="273" text-anchor="middle" class="tiny-text">统一证据主键连接</text>
+
+          <rect x="840" y="65" width="188" height="232" rx="9" class="node amber"/>
+          <text x="934" y="101" text-anchor="middle" class="node-title">⑤ 检索路由</text>
+          <text x="858" y="137" class="body-text">
+            <tspan x="858" dy="0">意图识别与范围闸门</tspan>
+            <tspan x="858" dy="25">七类业务路由</tspan>
+            <tspan x="858" dy="25">问题拆分与事实追问</tspan>
+            <tspan x="858" dy="25">时效 / 地域 / 主体过滤</tspan>
+          </text>
+          <rect x="858" y="256" width="152" height="24" rx="4" class="band amber"/>
+          <text x="934" y="273" text-anchor="middle" class="tiny-text">输出：检索计划</text>
+
+          <rect x="1044" y="65" width="188" height="232" rx="9" class="node blue"/>
+          <text x="1138" y="101" text-anchor="middle" class="node-title">⑥ 检索服务</text>
+          <text x="1062" y="137" class="body-text">
+            <tspan x="1062" dy="0">精确 / 关键词检索</tspan>
+            <tspan x="1062" dy="25">语义向量 / FAQ检索</tspan>
+            <tspan x="1062" dy="25">图谱 / 规则检索</tspan>
+            <tspan x="1062" dy="25">召回、重排、去重</tspan>
+          </text>
+          <rect x="1062" y="256" width="152" height="24" rx="4" class="band blue"/>
+          <text x="1138" y="273" text-anchor="middle" class="tiny-text">输出：证据候选集</text>
+
+          <rect x="1248" y="65" width="188" height="232" rx="9" class="node violet"/>
+          <text x="1342" y="101" text-anchor="middle" class="node-title">⑦ 生成与问答</text>
+          <text x="1266" y="137" class="body-text">
+            <tspan x="1266" dy="0">证据融合与冲突标记</tspan>
+            <tspan x="1266" dy="25">确定性风险规则</tspan>
+            <tspan x="1266" dy="25">LLM分析与草稿生成</tspan>
+            <tspan x="1266" dy="25">引用与置信度校验</tspan>
+          </text>
+          <rect x="1266" y="256" width="152" height="24" rx="4" class="band"/>
+          <text x="1342" y="273" text-anchor="middle" class="tiny-text">输出：待审核结果</text>
+
+          <rect x="1452" y="65" width="188" height="232" rx="9" class="node blue"/>
+          <text x="1546" y="101" text-anchor="middle" class="node-title">⑧ 应用接口</text>
+          <text x="1470" y="137" class="body-text">
+            <tspan x="1470" dy="0">对话与事项工作台</tspan>
+            <tspan x="1470" dy="25">政策 / FAQ / 风险 / 办税</tspan>
+            <tspan x="1470" dy="25">审核与知识管理后台</tspan>
+            <tspan x="1470" dy="25">权限、日志、流式输出</tspan>
+          </text>
+          <rect x="1470" y="256" width="152" height="24" rx="4" class="band blue"/>
+          <text x="1546" y="273" text-anchor="middle" class="tiny-text">返回：可追溯答复</text>
+
+          <line x1="212" y1="181" x2="224" y2="181" class="arrow-green"/>
+          <line x1="416" y1="181" x2="428" y2="181" class="arrow-green"/>
+          <line x1="620" y1="181" x2="632" y2="181" class="arrow-green"/>
+          <line x1="824" y1="181" x2="836" y2="181" class="arrow-green"/>
+          <line x1="1028" y1="181" x2="1040" y2="181" class="arrow"/>
+          <line x1="1232" y1="181" x2="1244" y2="181" class="arrow"/>
+          <line x1="1436" y1="181" x2="1448" y2="181" class="arrow"/>
+
+          <polyline points="1546,297 1546,352 934,352 934,301" class="arrow"/>
+          <rect x="1117" y="331" width="246" height="36" rx="5" class="label-bg"/>
+          <text x="1240" y="354" text-anchor="middle" class="route-text">用户请求：应用接口 → 检索路由</text>
+
+          <text x="24" y="414" class="layer-label">贯穿全链路的治理与安全能力</text>
+          <rect x="24" y="438" width="308" height="108" rx="8" class="node slate"/>
+          <text x="178" y="470" text-anchor="middle" class="node-title">证据与版本治理</text>
+          <text x="178" y="498" text-anchor="middle" class="body-text">source_doc_id / source_chunk_id</text>
+          <text x="178" y="523" text-anchor="middle" class="body-text">政策状态、审核状态、历史可复现</text>
+
+          <rect x="355" y="438" width="308" height="108" rx="8" class="node slate"/>
+          <text x="509" y="470" text-anchor="middle" class="node-title">专业安全闸门</text>
+          <text x="509" y="498" text-anchor="middle" class="body-text">业务日期 · 地区 · 主体 · 证据完整度</text>
+          <text x="509" y="523" text-anchor="middle" class="body-text">信息不足追问、冲突转人工、超范围拒答</text>
+
+          <rect x="686" y="438" width="308" height="108" rx="8" class="node slate"/>
+          <text x="840" y="470" text-anchor="middle" class="node-title">人工审核闭环</text>
+          <text x="840" y="498" text-anchor="middle" class="body-text">顾问编辑 · 复核通过/退回 · 知识纠错</text>
+          <text x="840" y="523" text-anchor="middle" class="body-text">关键事实变化后自动撤销旧审核状态</text>
+
+          <rect x="1017" y="438" width="308" height="108" rx="8" class="node slate"/>
+          <text x="1171" y="470" text-anchor="middle" class="node-title">质量评测与回归</text>
+          <text x="1171" y="498" text-anchor="middle" class="body-text">检索召回 · 引用验证 · 规则正反例</text>
+          <text x="1171" y="523" text-anchor="middle" class="body-text">拒答、时效、地域、适用性测试（RAGAS辅助）</text>
+
+          <rect x="1348" y="438" width="292" height="108" rx="8" class="node slate"/>
+          <text x="1494" y="470" text-anchor="middle" class="node-title">权限、隐私与审计</text>
+          <text x="1494" y="498" text-anchor="middle" class="body-text">角色最小权限 · 匿名化演示数据</text>
+          <text x="1494" y="523" text-anchor="middle" class="body-text">查询、编辑、审核、发布、导出留痕</text>
+
+          <polyline points="1494,546 1494,590 840,590 840,550" class="arrow-orange"/>
+          <text x="1167" y="614" text-anchor="middle" class="small-text">反馈与审核结果驱动知识修订、规则回归和版本更新</text>
+        </svg>
+      </div>
+    </section>
+
+    <section class="sheet" aria-labelledby="offline-title">
+      <div class="section-head">
+        <h2 id="offline-title">02 · 离线知识生产链</h2>
+        <p class="section-note">政策进入RAG与图谱链；官方问答和机构FAQ经审核后形成独立知识资产，并绑定正式条款</p>
+      </div>
+      <div class="diagram-wrap">
+        <svg viewBox="0 0 1680 1110" role="img" aria-labelledby="offline-svg-title offline-svg-desc">
+          <title id="offline-svg-title">TaxMind Pro 离线知识生产架构</title>
+          <desc id="offline-svg-desc">官方数据源经过白名单采集、数据处理、统一证据标识后，分别写入对象存储、关系数据库、向量数据库和知识图谱。</desc>
+          <defs>
+            <marker id="off-arrow-green" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto" markerUnits="strokeWidth"><path d="M0,0 L9,5 L0,10 Z" fill="#2f7f6a"/></marker>
+            <marker id="off-arrow-orange" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto" markerUnits="strokeWidth"><path d="M0,0 L9,5 L0,10 Z" fill="#bb6b26"/></marker>
+          </defs>
+
+          <text x="38" y="34" class="layer-label">P0/P1 国家层来源</text>
+          <rect x="38" y="55" width="350" height="104" rx="8" class="node green"/>
+          <text x="213" y="88" text-anchor="middle" class="node-title">国家税务总局</text>
+          <text x="213" y="116" text-anchor="middle" class="body-text">政策法规库 · 官方网站 · 政策解读</text>
+          <text x="213" y="140" text-anchor="middle" class="small-text">主法源与状态基线</text>
+
+          <rect x="426" y="55" width="350" height="104" rx="8" class="node green"/>
+          <text x="601" y="88" text-anchor="middle" class="node-title">财政部税政司</text>
+          <text x="601" y="116" text-anchor="middle" class="body-text">财政部及两部门联合公告</text>
+          <text x="601" y="140" text-anchor="middle" class="small-text">联合政策原发来源</text>
+
+          <text x="814" y="34" class="layer-label">P2 广东 / 深圳地方层</text>
+          <rect x="814" y="55" width="350" height="104" rx="8" class="node cyan"/>
+          <text x="989" y="88" text-anchor="middle" class="node-title">广东省税务局</text>
+          <text x="989" y="116" text-anchor="middle" class="body-text">地方政策法规库 · 办税指南</text>
+          <text x="989" y="140" text-anchor="middle" class="small-text">省级政策与事项口径</text>
+
+          <rect x="1202" y="55" width="440" height="104" rx="8" class="node cyan"/>
+          <text x="1422" y="88" text-anchor="middle" class="node-title">深圳市税务局 + 人工种子文件</text>
+          <text x="1422" y="116" text-anchor="middle" class="body-text">地方政策 · 热点问答 · 办税指南 · 文件导入</text>
+          <text x="1422" y="140" text-anchor="middle" class="small-text">仅公开资料，禁止绕过登录与反爬</text>
+
+          <line x1="213" y1="159" x2="213" y2="198" class="write-bus"/>
+          <line x1="601" y1="159" x2="601" y2="198" class="write-bus"/>
+          <line x1="989" y1="159" x2="989" y2="198" class="write-bus"/>
+          <line x1="1422" y1="159" x2="1422" y2="198" class="write-bus"/>
+          <line x1="213" y1="198" x2="1422" y2="198" class="write-bus"/>
+          <line x1="830" y1="198" x2="830" y2="224" style="fill:none;stroke:#2f7f6a;stroke-width:2.4;marker-end:url(#off-arrow-green)"/>
+
+          <rect x="70" y="228" width="1520" height="132" rx="10" class="layer-frame"/>
+          <text x="94" y="258" class="layer-label">数据采集模块</text>
+          <rect x="105" y="278" width="330" height="58" rx="7" class="node white"/>
+          <text x="270" y="313" text-anchor="middle" class="node-title">白名单低频增量采集</text>
+          <rect x="470" y="278" width="330" height="58" rx="7" class="node white"/>
+          <text x="635" y="313" text-anchor="middle" class="node-title">人工种子 / 文件导入</text>
+          <rect x="835" y="278" width="330" height="58" rx="7" class="node white"/>
+          <text x="1000" y="313" text-anchor="middle" class="node-title">更新检测 / 内容指纹</text>
+          <rect x="1200" y="278" width="350" height="58" rx="7" class="node white"/>
+          <text x="1375" y="313" text-anchor="middle" class="node-title">来源URL / 采集时间 / 任务日志</text>
+
+          <line x1="830" y1="360" x2="830" y2="398" style="fill:none;stroke:#2f7f6a;stroke-width:2.4;marker-end:url(#off-arrow-green)"/>
+
+          <rect x="70" y="402" width="1520" height="208" rx="10" class="layer-frame"/>
+          <text x="94" y="434" class="layer-label">数据处理模块</text>
+          <rect x="105" y="458" width="270" height="118" rx="7" class="node cyan"/>
+          <text x="240" y="490" text-anchor="middle" class="node-title">解析与清洗</text>
+          <text x="240" y="519" text-anchor="middle" class="body-text">HTML / PDF / 附件解析</text>
+          <text x="240" y="544" text-anchor="middle" class="body-text">OCR仅用于扫描件</text>
+
+          <rect x="405" y="458" width="270" height="118" rx="7" class="node cyan"/>
+          <text x="540" y="490" text-anchor="middle" class="node-title">质量处理</text>
+          <text x="540" y="519" text-anchor="middle" class="body-text">去重、异常、缺失、表格</text>
+          <text x="540" y="544" text-anchor="middle" class="body-text">原发/转载识别</text>
+
+          <rect x="705" y="458" width="270" height="118" rx="7" class="node cyan"/>
+          <text x="840" y="490" text-anchor="middle" class="node-title">元数据标准化</text>
+          <text x="840" y="519" text-anchor="middle" class="body-text">文号、机关、税种、地区</text>
+          <text x="840" y="544" text-anchor="middle" class="body-text">生效/失效/部分失效</text>
+
+          <rect x="1005" y="458" width="270" height="118" rx="7" class="node cyan"/>
+          <text x="1140" y="490" text-anchor="middle" class="node-title">条款结构化</text>
+          <text x="1140" y="519" text-anchor="middle" class="body-text">文件—章节—条款</text>
+          <text x="1140" y="544" text-anchor="middle" class="body-text">父块—子块映射</text>
+
+          <rect x="1305" y="458" width="245" height="118" rx="7" class="node cyan"/>
+          <text x="1427" y="490" text-anchor="middle" class="node-title">FAQ构建与审核</text>
+          <text x="1427" y="519" text-anchor="middle" class="body-text">官方问答 / 机构FAQ</text>
+          <text x="1427" y="544" text-anchor="middle" class="body-text">问题变体 · 政策绑定</text>
+
+          <line x1="840" y1="610" x2="840" y2="641" style="fill:none;stroke:#2f7f6a;stroke-width:2.4;marker-end:url(#off-arrow-green)"/>
+
+          <rect x="145" y="646" width="1390" height="72" rx="8" class="band green"/>
+          <text x="840" y="675" text-anchor="middle" class="node-title">统一证据主键与版本治理</text>
+          <text x="840" y="701" text-anchor="middle" class="body-text">source_doc_id · source_chunk_id · doc_no · source_url · effective_start/end · region · status · review_status</text>
+
+          <line x1="840" y1="718" x2="840" y2="749" class="write-bus"/>
+          <line x1="222" y1="749" x2="1458" y2="749" class="write-bus"/>
+          <line x1="222" y1="749" x2="222" y2="773" style="fill:none;stroke:#2f7f6a;stroke-width:2.2;marker-end:url(#off-arrow-green)"/>
+          <line x1="634" y1="749" x2="634" y2="773" style="fill:none;stroke:#2f7f6a;stroke-width:2.2;marker-end:url(#off-arrow-green)"/>
+          <line x1="1046" y1="749" x2="1046" y2="773" style="fill:none;stroke:#2f7f6a;stroke-width:2.2;marker-end:url(#off-arrow-green)"/>
+          <line x1="1458" y1="749" x2="1458" y2="773" style="fill:none;stroke:#2f7f6a;stroke-width:2.2;marker-end:url(#off-arrow-green)"/>
+
+          <rect x="58" y="778" width="328" height="166" rx="8" class="node slate"/>
+          <text x="222" y="812" text-anchor="middle" class="node-title">原始资料归档</text>
+          <text x="222" y="842" text-anchor="middle" class="body-text">原始HTML / PDF / 附件</text>
+          <text x="222" y="868" text-anchor="middle" class="body-text">解析文本 / 采集快照</text>
+          <rect x="96" y="892" width="252" height="34" rx="5" class="band"/>
+          <text x="222" y="915" text-anchor="middle" class="route-text">写入 MinIO 对象存储</text>
+
+          <rect x="470" y="778" width="328" height="166" rx="8" class="node blue"/>
+          <text x="634" y="812" text-anchor="middle" class="node-title">结构化业务数据</text>
+          <text x="634" y="842" text-anchor="middle" class="body-text">政策元数据 / FAQ正文 / 状态</text>
+          <text x="634" y="868" text-anchor="middle" class="body-text">会话、事项、规则、审核、审计</text>
+          <rect x="508" y="892" width="252" height="34" rx="5" class="band blue"/>
+          <text x="634" y="915" text-anchor="middle" class="route-text">写入 MySQL</text>
+
+          <rect x="882" y="778" width="328" height="166" rx="8" class="node amber"/>
+          <text x="1046" y="812" text-anchor="middle" class="node-title">RAG 索引链</text>
+          <text x="1046" y="842" text-anchor="middle" class="body-text">条款父子分块 · BGE-M3向量化</text>
+          <text x="1046" y="868" text-anchor="middle" class="body-text">稠密/稀疏索引 + FAQ问题向量</text>
+          <rect x="920" y="892" width="252" height="34" rx="5" class="band amber"/>
+          <text x="1046" y="915" text-anchor="middle" class="route-text">写入 Milvus</text>
+
+          <rect x="1294" y="778" width="328" height="166" rx="8" class="node violet"/>
+          <text x="1458" y="812" text-anchor="middle" class="node-title">知识图谱构建链</text>
+          <text x="1458" y="838" text-anchor="middle" class="body-text">规则 + LLM抽取 · 实体消歧</text>
+          <text x="1458" y="862" text-anchor="middle" class="body-text">沿革/条件/义务 · FAQ—条款关系</text>
+          <text x="1458" y="886" text-anchor="middle" class="body-text">关系证据校验 + 人工审核</text>
+          <rect x="1332" y="902" width="252" height="34" rx="5" class="band"/>
+          <text x="1458" y="925" text-anchor="middle" class="route-text">写入 Neo4j</text>
+
+          <line x1="222" y1="944" x2="222" y2="987" style="fill:none;stroke:#2f7f6a;stroke-width:2.2;marker-end:url(#off-arrow-green)"/>
+          <line x1="634" y1="944" x2="634" y2="987" style="fill:none;stroke:#2f7f6a;stroke-width:2.2;marker-end:url(#off-arrow-green)"/>
+          <line x1="1046" y1="944" x2="1046" y2="987" style="fill:none;stroke:#2f7f6a;stroke-width:2.2;marker-end:url(#off-arrow-green)"/>
+          <line x1="1458" y1="944" x2="1458" y2="987" style="fill:none;stroke:#2f7f6a;stroke-width:2.2;marker-end:url(#off-arrow-green)"/>
+
+          <rect x="58" y="992" width="328" height="76" rx="8" class="node white"/>
+          <text x="222" y="1024" text-anchor="middle" class="node-title">MinIO</text>
+          <text x="222" y="1050" text-anchor="middle" class="small-text">原文、附件、解析产物</text>
+          <rect x="470" y="992" width="328" height="76" rx="8" class="node white"/>
+          <text x="634" y="1024" text-anchor="middle" class="node-title">MySQL</text>
+          <text x="634" y="1050" text-anchor="middle" class="small-text">结构化主数据、会话/事项长记忆、FAQ正文</text>
+          <rect x="882" y="992" width="328" height="76" rx="8" class="node white"/>
+          <text x="1046" y="1024" text-anchor="middle" class="node-title">Milvus</text>
+          <text x="1046" y="1050" text-anchor="middle" class="small-text">条款向量、FAQ问题变体与审核案例索引</text>
+          <rect x="1294" y="992" width="328" height="76" rx="8" class="node white"/>
+          <text x="1458" y="1024" text-anchor="middle" class="node-title">Neo4j</text>
+          <text x="1458" y="1050" text-anchor="middle" class="small-text">政策沿革、条件/义务链、FAQ—政策关系</text>
+
+          <polyline points="1548,576 1608,576 1608,682 1537,682" style="fill:none;stroke:#bb6b26;stroke-width:2.2;stroke-dasharray:8 6;marker-end:url(#off-arrow-orange)"/>
+          <text x="1604" y="634" text-anchor="end" class="small-text">审核退回</text>
+        </svg>
+      </div>
+    </section>
+
+    <section class="sheet" aria-labelledby="online-title">
+      <div class="section-head">
+        <h2 id="online-title">03 · 在线 GraphRAG 专业问答链</h2>
+        <p class="section-note">加入长短期记忆与FAQ加速层；任何FAQ命中仍须回查政策时效、地区、主体和正式条款</p>
+      </div>
+      <div class="diagram-wrap">
+        <svg viewBox="0 0 1680 1390" role="img" aria-labelledby="online-svg-title online-svg-desc">
+          <title id="online-svg-title">TaxMind Pro 在线GraphRAG问答架构</title>
+          <desc id="online-svg-desc">专业用户从应用工作台提交问题，经会话记忆、事实核验、七类业务路由、五类检索、证据融合、规则与大模型生成、引用校验和人工审核后返回结果。</desc>
+          <defs>
+            <marker id="on-arrow-blue" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto" markerUnits="strokeWidth"><path d="M0,0 L9,5 L0,10 Z" fill="#315d9e"/></marker>
+            <marker id="on-arrow-start" markerWidth="10" markerHeight="10" refX="2" refY="5" orient="auto" markerUnits="strokeWidth"><path d="M9,0 L0,5 L9,10 Z" fill="#5d789e"/></marker>
+            <marker id="on-arrow-orange" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto" markerUnits="strokeWidth"><path d="M0,0 L9,5 L0,10 Z" fill="#bb6b26"/></marker>
+          </defs>
+
+          <rect x="148" y="50" width="300" height="82" rx="8" class="node blue"/>
+          <text x="298" y="84" text-anchor="middle" class="node-title">税务师 / 财税顾问</text>
+          <text x="298" y="109" text-anchor="middle" class="small-text">创建事项、确认事实、编辑草稿</text>
+          <rect x="690" y="50" width="300" height="82" rx="8" class="node amber"/>
+          <text x="840" y="84" text-anchor="middle" class="node-title">复核负责人</text>
+          <text x="840" y="109" text-anchor="middle" class="small-text">证据审核、通过、退回、升级</text>
+          <rect x="1232" y="50" width="300" height="82" rx="8" class="node green"/>
+          <text x="1382" y="84" text-anchor="middle" class="node-title">知识管理员</text>
+          <text x="1382" y="109" text-anchor="middle" class="small-text">政策、关系、规则与纠错发布</text>
+
+          <line x1="298" y1="132" x2="298" y2="175" style="fill:none;stroke:#315d9e;stroke-width:2.4;marker-end:url(#on-arrow-blue)"/>
+          <line x1="840" y1="132" x2="840" y2="175" style="fill:none;stroke:#bb6b26;stroke-width:2.2;stroke-dasharray:8 6;marker-end:url(#on-arrow-orange)"/>
+          <line x1="1382" y1="132" x2="1382" y2="175" style="fill:none;stroke:#bb6b26;stroke-width:2.2;stroke-dasharray:8 6;marker-end:url(#on-arrow-orange)"/>
+
+          <rect x="60" y="180" width="1560" height="170" rx="10" class="layer-frame"/>
+          <text x="84" y="211" class="layer-label">应用接口层 · React Web + FastAPI API + SSE / WebSocket 流式输出</text>
+          <rect x="95" y="236" width="340" height="84" rx="7" class="node blue"/>
+          <text x="265" y="269" text-anchor="middle" class="node-title">对话与事项工作台</text>
+          <text x="265" y="297" text-anchor="middle" class="body-text">客户画像 · 子事项 · 草稿</text>
+          <rect x="480" y="236" width="340" height="84" rx="7" class="node blue"/>
+          <text x="650" y="269" text-anchor="middle" class="node-title">政策检索与证据阅读</text>
+          <text x="650" y="297" text-anchor="middle" class="body-text">原文条款 · 沿革 · 关联文件</text>
+          <rect x="865" y="236" width="340" height="84" rx="7" class="node blue"/>
+          <text x="1035" y="269" text-anchor="middle" class="node-title">风险 / 办税 / 审核工作台</text>
+          <text x="1035" y="297" text-anchor="middle" class="body-text">条件矩阵 · 风险清单 · 审核包</text>
+          <rect x="1250" y="236" width="335" height="84" rx="7" class="node blue"/>
+          <text x="1417" y="269" text-anchor="middle" class="node-title">知识运营与系统管理</text>
+          <text x="1417" y="297" text-anchor="middle" class="body-text">知识审核 · 角色权限 · 操作审计</text>
+
+          <line x1="840" y1="350" x2="840" y2="389" style="fill:none;stroke:#315d9e;stroke-width:2.4;marker-end:url(#on-arrow-blue)"/>
+          <line x1="1350" y1="350" x2="1350" y2="389" style="fill:none;stroke:#315d9e;stroke-width:2.4;marker-end:url(#on-arrow-blue)"/>
+
+          <rect x="80" y="394" width="980" height="126" rx="9" class="node amber"/>
+          <text x="570" y="427" text-anchor="middle" class="node-title">查询理解与专业安全闸门</text>
+          <text x="570" y="456" text-anchor="middle" class="body-text">意图识别 → 范围判断 → 客户事实确认 → 缺失信息追问 → 复合问题拆分</text>
+          <text x="570" y="482" text-anchor="middle" class="body-text">硬校验：业务日期 · 地区 · 主体身份 · 证据等级 · 敏感数据提示</text>
+          <rect x="338" y="493" width="464" height="18" rx="4" class="band amber"/>
+          <text x="570" y="507" text-anchor="middle" class="tiny-text">缺关键事实：停止确定性结论并返回追问</text>
+
+          <rect x="1100" y="394" width="500" height="126" rx="9" class="node blue"/>
+          <text x="1350" y="425" text-anchor="middle" class="node-title">会话与记忆管理</text>
+          <text x="1350" y="451" text-anchor="middle" class="body-text">Redis：近期对话、路由、待追问、执行状态（TTL）</text>
+          <text x="1350" y="477" text-anchor="middle" class="body-text">MySQL：原始消息、确认事实、事项版本、审核记录</text>
+          <text x="1350" y="503" text-anchor="middle" class="body-text">Milvus：仅召回审核通过的FAQ与机构案例</text>
+
+          <line x1="1064" y1="457" x2="1096" y2="457" style="fill:none;stroke:#5d789e;stroke-width:2;marker-start:url(#on-arrow-start);marker-end:url(#on-arrow-blue)"/>
+
+          <line x1="840" y1="520" x2="840" y2="557" style="fill:none;stroke:#315d9e;stroke-width:2.4;marker-end:url(#on-arrow-blue)"/>
+
+          <rect x="60" y="562" width="1560" height="178" rx="10" class="layer-frame"/>
+          <text x="84" y="594" class="layer-label">检索路由模块 · 业务任务优先，LangGraph状态编排（建议），底层检索策略随后确定</text>
+
+          <rect x="98" y="621" width="200" height="72" rx="7" class="node amber"/>
+          <text x="198" y="650" text-anchor="middle" class="route-text">明确政策查询</text>
+          <text x="198" y="674" text-anchor="middle" class="small-text">文号 / 标题 / 条款</text>
+          <rect x="310" y="621" width="200" height="72" rx="7" class="node amber"/>
+          <text x="410" y="650" text-anchor="middle" class="route-text">政策适用性判断</text>
+          <text x="410" y="674" text-anchor="middle" class="small-text">条件与排除矩阵</text>
+          <rect x="522" y="621" width="200" height="72" rx="7" class="node amber"/>
+          <text x="622" y="650" text-anchor="middle" class="route-text">多条件咨询</text>
+          <text x="622" y="674" text-anchor="middle" class="small-text">拆分子事项</text>
+          <rect x="734" y="621" width="200" height="72" rx="7" class="node amber"/>
+          <text x="834" y="650" text-anchor="middle" class="route-text">办税流程查询</text>
+          <text x="834" y="674" text-anchor="middle" class="small-text">地区化事项卡</text>
+          <rect x="946" y="621" width="200" height="72" rx="7" class="node amber"/>
+          <text x="1046" y="650" text-anchor="middle" class="route-text">事项风险审查</text>
+          <text x="1046" y="674" text-anchor="middle" class="small-text">规则触发与证据</text>
+          <rect x="1158" y="621" width="200" height="72" rx="7" class="node amber"/>
+          <text x="1258" y="650" text-anchor="middle" class="route-text">版本与有效期</text>
+          <text x="1258" y="674" text-anchor="middle" class="small-text">当时有效 / 当前有效</text>
+          <rect x="1370" y="621" width="200" height="72" rx="7" class="node danger"/>
+          <text x="1470" y="650" text-anchor="middle" class="route-text">超范围 / 证据不足</text>
+          <text x="1470" y="674" text-anchor="middle" class="small-text">拒答或转人工</text>
+
+          <line x1="840" y1="740" x2="840" y2="775" style="fill:none;stroke:#315d9e;stroke-width:2.4;marker-end:url(#on-arrow-blue)"/>
+          <line x1="180" y1="776" x2="1480" y2="776" class="bus"/>
+          <line x1="180" y1="776" x2="180" y2="805" style="fill:none;stroke:#315d9e;stroke-width:2.2;marker-end:url(#on-arrow-blue)"/>
+          <line x1="505" y1="776" x2="505" y2="805" style="fill:none;stroke:#315d9e;stroke-width:2.2;marker-end:url(#on-arrow-blue)"/>
+          <line x1="830" y1="776" x2="830" y2="805" style="fill:none;stroke:#315d9e;stroke-width:2.2;marker-end:url(#on-arrow-blue)"/>
+          <line x1="1155" y1="776" x2="1155" y2="805" style="fill:none;stroke:#315d9e;stroke-width:2.2;marker-end:url(#on-arrow-blue)"/>
+          <line x1="1480" y1="776" x2="1480" y2="805" style="fill:none;stroke:#315d9e;stroke-width:2.2;marker-end:url(#on-arrow-blue)"/>
+
+          <rect x="30" y="810" width="300" height="184" rx="9" class="node blue"/>
+          <text x="180" y="844" text-anchor="middle" class="node-title">精确 / 关键词检索</text>
+          <text x="180" y="873" text-anchor="middle" class="body-text">文号、标题、条款、状态</text>
+          <text x="180" y="899" text-anchor="middle" class="body-text">BM25 / 稀疏召回</text>
+          <rect x="65" y="928" width="230" height="43" rx="5" class="band blue"/>
+          <text x="180" y="955" text-anchor="middle" class="route-text">MySQL + Milvus</text>
+
+          <rect x="355" y="810" width="300" height="184" rx="9" class="node blue"/>
+          <text x="505" y="844" text-anchor="middle" class="node-title">语义向量检索</text>
+          <text x="505" y="873" text-anchor="middle" class="body-text">BGE-M3 稠密向量</text>
+          <text x="505" y="899" text-anchor="middle" class="body-text">父子块召回与上下文回填</text>
+          <rect x="390" y="928" width="230" height="43" rx="5" class="band blue"/>
+          <text x="505" y="955" text-anchor="middle" class="route-text">Milvus</text>
+
+          <rect x="680" y="810" width="300" height="184" rx="9" class="node green"/>
+          <text x="830" y="844" text-anchor="middle" class="node-title">FAQ 高频问答检索</text>
+          <text x="830" y="873" text-anchor="middle" class="body-text">标准问题 / 变体语义匹配</text>
+          <text x="830" y="899" text-anchor="middle" class="body-text">地区、主体、时效与条款复核</text>
+          <rect x="715" y="928" width="230" height="43" rx="5" class="band green"/>
+          <text x="830" y="955" text-anchor="middle" class="route-text">MySQL + Milvus + Neo4j</text>
+
+          <rect x="1005" y="810" width="300" height="184" rx="9" class="node violet"/>
+          <text x="1155" y="844" text-anchor="middle" class="node-title">图谱关联检索</text>
+          <text x="1155" y="873" text-anchor="middle" class="body-text">政策沿革、条件链、义务链</text>
+          <text x="1155" y="899" text-anchor="middle" class="body-text">关系路径必须绑定来源条款</text>
+          <rect x="1040" y="928" width="230" height="43" rx="5" class="band"/>
+          <text x="1155" y="955" text-anchor="middle" class="route-text">Neo4j</text>
+
+          <rect x="1330" y="810" width="300" height="184" rx="9" class="node amber"/>
+          <text x="1480" y="844" text-anchor="middle" class="node-title">规则 / 办税 / 原文检索</text>
+          <text x="1480" y="873" text-anchor="middle" class="body-text">风险规则、事项卡、官方原文</text>
+          <text x="1480" y="899" text-anchor="middle" class="body-text">地区、日期、主体硬过滤</text>
+          <rect x="1365" y="928" width="230" height="43" rx="5" class="band amber"/>
+          <text x="1480" y="955" text-anchor="middle" class="route-text">MySQL + MinIO</text>
+
+          <line x1="180" y1="994" x2="180" y2="1023" class="bus"/>
+          <line x1="505" y1="994" x2="505" y2="1023" class="bus"/>
+          <line x1="830" y1="994" x2="830" y2="1023" class="bus"/>
+          <line x1="1155" y1="994" x2="1155" y2="1023" class="bus"/>
+          <line x1="1480" y1="994" x2="1480" y2="1023" class="bus"/>
+          <line x1="180" y1="1023" x2="1480" y2="1023" class="bus"/>
+          <line x1="840" y1="1023" x2="840" y2="1052" style="fill:none;stroke:#315d9e;stroke-width:2.4;marker-end:url(#on-arrow-blue)"/>
+
+          <rect x="180" y="1057" width="1320" height="108" rx="9" class="node cyan"/>
+          <text x="840" y="1090" text-anchor="middle" class="node-title">证据融合与排序</text>
+          <text x="840" y="1119" text-anchor="middle" class="body-text">多路召回合并 → bge-reranker-v2-m3重排 → 去重 → 父块回填 → 关系证据展开 → 冲突检测</text>
+          <text x="840" y="1147" text-anchor="middle" class="body-text">输出带来源层级、业务时点状态、地区、审核状态和证据路径的候选证据集</text>
+
+          <line x1="840" y1="1165" x2="840" y2="1182" class="bus"/>
+          <line x1="285" y1="1182" x2="840" y2="1182" class="bus"/>
+          <line x1="285" y1="1182" x2="285" y2="1197" style="fill:none;stroke:#315d9e;stroke-width:2.4;marker-end:url(#on-arrow-blue)"/>
+          <line x1="840" y1="1182" x2="840" y2="1197" style="fill:none;stroke:#315d9e;stroke-width:2.4;marker-end:url(#on-arrow-blue)"/>
+
+          <rect x="70" y="1202" width="430" height="130" rx="9" class="node amber"/>
+          <text x="285" y="1236" text-anchor="middle" class="node-title">确定性规则与条件判断</text>
+          <text x="285" y="1265" text-anchor="middle" class="body-text">风险规则 · 条件/排除组 · 四态结论</text>
+          <text x="285" y="1292" text-anchor="middle" class="body-text">LLM不得修改规则命中与风险等级</text>
+
+          <rect x="625" y="1202" width="430" height="130" rx="9" class="node violet"/>
+          <text x="840" y="1236" text-anchor="middle" class="node-title">上下文编排与大模型生成</text>
+          <text x="840" y="1265" text-anchor="middle" class="body-text">证据集 + 已确认事实 + 规则结果 + DashScope LLM</text>
+          <text x="840" y="1292" text-anchor="middle" class="body-text">生成分析、追问、风险说明和客户答复草稿</text>
+
+          <rect x="1180" y="1202" width="430" height="130" rx="9" class="node green"/>
+          <text x="1395" y="1236" text-anchor="middle" class="node-title">回答校验与责任边界</text>
+          <text x="1395" y="1265" text-anchor="middle" class="body-text">引用核对 · 时效/地区复检 · 置信度分维展示</text>
+          <text x="1395" y="1292" text-anchor="middle" class="body-text">缺证据降级、冲突转人工、标记“待审核”</text>
+
+          <line x1="500" y1="1267" x2="621" y2="1267" style="fill:none;stroke:#315d9e;stroke-width:2.4;marker-end:url(#on-arrow-blue)"/>
+          <line x1="1055" y1="1267" x2="1176" y2="1267" style="fill:none;stroke:#315d9e;stroke-width:2.4;marker-end:url(#on-arrow-blue)"/>
+
+          <polyline points="1610,1267 1650,1267 1650,278 1589,278" style="fill:none;stroke:#315d9e;stroke-width:2.4;marker-end:url(#on-arrow-blue)"/>
+          <rect x="1497" y="1060" width="151" height="72" rx="6" class="label-bg"/>
+          <text x="1572" y="1087" text-anchor="middle" class="route-text">结果返回</text>
+          <text x="1572" y="1110" text-anchor="middle" class="small-text">引用 / 风险 / 草稿</text>
+
+          <polyline points="1395,1332 1395,1362 840,1362 840,1336" style="fill:none;stroke:#bb6b26;stroke-width:2.2;stroke-dasharray:8 6;marker-end:url(#on-arrow-orange)"/>
+          <text x="1118" y="1382" text-anchor="middle" class="small-text">人工审核与错误反馈进入知识纠错及规则回归闭环</text>
+        </svg>
+      </div>
+    </section>
+
+    <section class="sheet" aria-labelledby="module-title">
+      <div class="section-head">
+        <h2 id="module-title">04 · 模块职责与串联说明</h2>
+        <p class="section-note">职责按业务边界拆分，避免把所有能力堆入一个“智能问答服务”</p>
+      </div>
+      <div class="summary-grid">
+        <article class="summary-item"><h3>1. 数据采集</h3><p>从税务总局、财政部、广东及深圳税务局等公开白名单来源获取政策、解读、指南与附件，保留来源和采集记录。</p></article>
+        <article class="summary-item"><h3>2. 数据处理</h3><p>完成解析、OCR、清洗、去重、元数据标准化、时效识别及条款父子分块，为两条知识链提供一致输入。</p></article>
+        <article class="summary-item"><h3>3. 知识图谱</h3><p>构建政策沿革、优惠条件、排除条件、涉税义务、风险规则和办税事项关系；重要关系必须回溯原始条款并审核。</p></article>
+        <article class="summary-item"><h3>4. 统一存储</h3><p>MySQL作为结构化主库，MinIO保存原文，Milvus保存向量索引，Neo4j保存图谱关系，Redis保存短期会话状态；统一ID完成证据对齐。</p></article>
+        <article class="summary-item"><h3>5. 检索路由</h3><p>识别七类业务任务，先校验主体、日期、地区和事实完整度，再决定精确、语义、图谱或规则检索组合。</p></article>
+        <article class="summary-item"><h3>6. 检索服务</h3><p>并行执行关键词、向量、FAQ、图谱和规则检索，再进行重排、过滤、去重、父块回填和关系证据展开。</p></article>
+        <article class="summary-item"><h3>7. 生成与问答</h3><p>确定性规则负责风险和条件判断，LLM负责问题理解与解释；生成后再次验证引用、时效、地域与责任措辞。</p></article>
+        <article class="summary-item"><h3>8. 应用接口</h3><p>通过对话、事项、政策、FAQ、风险、办税、审核和知识后台承接专业用户工作，完成权限控制、日志记录和结果返回。</p></article>
+        <article class="summary-item"><h3>9. FAQ知识模块</h3><p>管理官方热点问答和机构审核FAQ，保存标准问题、问题变体、标准答案、适用范围与政策依据；未审核对话不得进入FAQ库。</p></article>
+        <article class="summary-item"><h3>10. 会话与记忆管理</h3><p>Redis维护当前会话工作记忆，MySQL保存事项长期记忆；只有审核通过的FAQ和机构案例才建立向量索引用于跨会话召回。</p></article>
+      </div>
+      <p class="chain-note"><strong>串联关系：</strong>官方资料经处理后进入RAG、图谱和FAQ构建链；专业用户从应用接口提交问题，Redis维护当前工作状态，MySQL提供已确认事项事实。检索路由组合关键词、向量、FAQ、图谱和规则检索形成证据集；确定性规则与大模型生成分析结果，经引用和安全校验后返回工作台。审核通过的FAQ或案例才能成为机构长期经验，审核反馈继续驱动知识修订与评测回归。</p>
+    </section>
+
+    <section class="sheet" aria-labelledby="storage-title">
+      <div class="section-head">
+        <h2 id="storage-title">05 · 存储与记忆分配</h2>
+        <p class="section-note">原始文件、结构化主数据、派生索引、图关系和会话状态分别管理，避免职责混用</p>
+      </div>
+      <div class="diagram-wrap">
+        <table class="storage-table">
+          <thead>
+            <tr><th>存储</th><th>保存内容</th><th>系统定位与管理规则</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>MySQL</td><td>政策元数据、文档/条款映射、FAQ正文与状态、风险规则、用户权限、会话消息、已确认事实、事项版本、审核和审计记录。</td><td><strong>结构化业务与知识治理权威主库。</strong>负责唯一约束、事务、精确过滤和版本状态；Milvus、Neo4j中的重复字段以这里的权威状态为准。</td></tr>
+            <tr><td>Milvus</td><td>政策条款稠密/稀疏向量、父子块检索字段、FAQ标准问题及问题变体向量、审核通过的机构案例向量。</td><td><strong>可重建的语义与混合检索索引。</strong>不保存审核流程真相；删除或停用资产时由MySQL状态控制检索资格并同步索引。</td></tr>
+            <tr><td>Neo4j</td><td>政策—条款—优惠—条件—经营行为—义务—办税事项关系，以及FAQ—正式条款和案例—证据之间的可追溯关系。</td><td><strong>领域关系权威库。</strong>负责沿革、多跳路径和证据关系；普通聊天记录不得写入政策图谱。</td></tr>
+            <tr><td>MinIO</td><td>原始HTML、PDF、附件、图片、OCR产物、解析文本快照和必要的导出文件。</td><td><strong>原始资料与大对象归档。</strong>通过source_doc_id与MySQL、Milvus、Neo4j关联，不承担业务筛选和规则判断。</td></tr>
+            <tr><td>Redis</td><td>最近对话、当前路由、待追问问题、临时证据ID、LangGraph执行状态、流式生成状态和热点缓存。</td><td><strong>短期会话工作记忆。</strong>设置TTL，数据丢失后可从MySQL恢复；不作为政策、审核结论或事项事实的永久依据。</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="memory-chain" aria-label="会话记忆与FAQ沉淀流程">
+        <div class="memory-node"><strong>当前对话</strong><span>消息、临时事实、检索过程和待追问信息</span></div>
+        <div class="memory-arrow" aria-hidden="true">→</div>
+        <div class="memory-node"><strong>Redis短期记忆</strong><span>维持当前会话和工作流状态，按TTL自动过期</span></div>
+        <div class="memory-arrow" aria-hidden="true">→</div>
+        <div class="memory-node"><strong>MySQL事项长期记忆</strong><span>用户确认后才保存事实、版本、草稿、证据和审核记录</span></div>
+        <div class="memory-arrow" aria-hidden="true">→</div>
+        <div class="memory-node"><strong>审核后的FAQ/机构经验</strong><span>发布后写入MySQL并在Milvus建索引，关联Neo4j正式条款</span></div>
+      </div>
+      <p class="chain-note"><strong>关键边界：</strong>FAQ是经过审核的知识加速层，不是法规主库，也不是普通会话记忆。FAQ命中后仍需回查政策状态、地区、主体和业务日期；用户在对话中提出的政策更正只能创建纠错任务，不能直接修改正式知识。</p>
+    </section>
+  </main>
+</body>
+</html>
