@@ -34,6 +34,7 @@ Thumbs.db
 # runtime data and models
 .data/
 .cache/
+.tmp/
 models/
 var/log/
 var/cache/

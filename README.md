@@ -17,6 +17,21 @@ TaxMind Pro 是面向税务师事务所、代理记账机构和财税咨询机�
 - Node.js 24、pnpm 11。
 - Windows 本地开发优先使用 `scripts/*.ps1`；CI 使用 Bash/Makefile 等价入口。
 
+### 本地基础设施
+
+复制 `.env.example` 为本地 `.env` 后，可先启动 MySQL、Redis、MinIO、Milvus 与 Neo4j：
+
+```powershell
+docker compose up -d
+```
+
+迁移只通过 Alembic 执行；首次接入空库前先确认 `.env` 中的 MySQL 参数：
+
+```powershell
+Set-Location apps/backend
+uv run alembic upgrade head
+```
+
 ## 当前可运行范围
 
 ```powershell

@@ -1,0 +1,160 @@
+name: taxmind-pro
+
+services:
+  mysql:
+    image: ${MYSQL_IMAGE:-mysql:8.4}
+    environment:
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-taxmind}
+      MYSQL_USER: ${MYSQL_USER:-taxmind}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-taxmind-dev-only}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-root-dev-only}
+      TZ: UTC
+    command:
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_0900_ai_ci
+    ports:
+      - "${MYSQL_EXPOSE_PORT:-3306}:3306"
+    volumes:
+      - mysql-data:/var/lib/mysql
+    healthcheck:
+      test: [CMD-SHELL, "mysqladmin ping -h 127.0.0.1 -u root -p$$MYSQL_ROOT_PASSWORD --silent"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+    networks: [taxmind]
+
+  redis:
+    image: ${REDIS_IMAGE:-redis:7.4-alpine}
+    command: [redis-server, --appendonly, "yes"]
+    ports:
+      - "${REDIS_EXPOSE_PORT:-6379}:6379"
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: [CMD, redis-cli, ping]
+      interval: 5s
+      timeout: 3s
+      retries: 30
+    networks: [taxmind]
+
+  minio:
+    image: ${MINIO_IMAGE:-quay.io/minio/minio:RELEASE.2025-04-22T22-12-26Z}
+    command: server /data --console-address :9001
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ACCESS_KEY:-taxmind-minio}
+      MINIO_ROOT_PASSWORD: ${MINIO_SECRET_KEY:-taxmind-minio-dev-only}
+    ports:
+      - "${MINIO_API_EXPOSE_PORT:-9000}:9000"
+      - "${MINIO_CONSOLE_EXPOSE_PORT:-9001}:9001"
+    volumes:
+      - minio-data:/data
+    healthcheck:
+      test: [CMD-SHELL, "curl -fsS http://localhost:9000/minio/health/live || exit 1"]
+      interval: 5s
+      timeout: 3s
+      retries: 30
+    networks: [taxmind]
+
+  minio-init:
+    image: ${MINIO_MC_IMAGE:-quay.io/minio/mc:RELEASE.2025-04-16T18-13-26Z}
+    depends_on:
+      minio:
+        condition: service_healthy
+    entrypoint: /bin/sh
+    command: >-
+      -c "mc alias set local http://minio:9000
+      $${MINIO_ROOT_USER} $${MINIO_ROOT_PASSWORD} &&
+      mc mb --ignore-existing local/$${MINIO_RAW_BUCKET} &&
+      mc mb --ignore-existing local/$${MINIO_PARSED_BUCKET} &&
+      mc mb --ignore-existing local/$${MINIO_EXPORTS_BUCKET} &&
+      mc mb --ignore-existing local/$${MINIO_TEMP_BUCKET} &&
+      mc mb --ignore-existing local/milvus-bucket"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ACCESS_KEY:-taxmind-minio}
+      MINIO_ROOT_PASSWORD: ${MINIO_SECRET_KEY:-taxmind-minio-dev-only}
+      MINIO_RAW_BUCKET: ${MINIO_RAW_BUCKET:-taxmind-raw}
+      MINIO_PARSED_BUCKET: ${MINIO_PARSED_BUCKET:-taxmind-parsed}
+      MINIO_EXPORTS_BUCKET: ${MINIO_EXPORTS_BUCKET:-taxmind-exports}
+      MINIO_TEMP_BUCKET: ${MINIO_TEMP_BUCKET:-taxmind-temp}
+    networks: [taxmind]
+
+  etcd:
+    image: ${ETCD_IMAGE:-quay.io/coreos/etcd:v3.5.18}
+    environment:
+      ETCD_AUTO_COMPACTION_MODE: revision
+      ETCD_AUTO_COMPACTION_RETENTION: "1000"
+      ETCD_QUOTA_BACKEND_BYTES: "4294967296"
+      ETCD_SNAPSHOT_COUNT: "50000"
+    command: >-
+      etcd --advertise-client-urls=http://127.0.0.1:2379
+      --listen-client-urls=http://0.0.0.0:2379
+      --data-dir=/etcd
+    volumes:
+      - etcd-data:/etcd
+    healthcheck:
+      test: [CMD, etcdctl, endpoint, health]
+      interval: 5s
+      timeout: 3s
+      retries: 30
+    networks: [taxmind]
+
+  milvus:
+    image: ${MILVUS_IMAGE:-milvusdb/milvus:v2.6.4}
+    command: [milvus, run, standalone]
+    security_opt:
+      - seccomp:unconfined
+    environment:
+      ETCD_ENDPOINTS: etcd:2379
+      MINIO_ADDRESS: minio:9000
+      MINIO_ACCESS_KEY_ID: ${MINIO_ACCESS_KEY:-taxmind-minio}
+      MINIO_SECRET_ACCESS_KEY: ${MINIO_SECRET_KEY:-taxmind-minio-dev-only}
+      COMMON_STORAGETYPE: minio
+    depends_on:
+      etcd:
+        condition: service_healthy
+      minio-init:
+        condition: service_completed_successfully
+    ports:
+      - "${MILVUS_EXPOSE_PORT:-19530}:19530"
+      - "${MILVUS_HEALTH_EXPOSE_PORT:-9091}:9091"
+    volumes:
+      - milvus-data:/var/lib/milvus
+    healthcheck:
+      test: [CMD-SHELL, "curl -fsS http://localhost:9091/healthz || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+    networks: [taxmind]
+
+  neo4j:
+    image: ${NEO4J_IMAGE:-neo4j:5.26-community}
+    environment:
+      NEO4J_AUTH: ${NEO4J_USER:-neo4j}/${NEO4J_PASSWORD:-taxmind-neo4j-dev-only}
+      NEO4J_server_memory_heap_initial__size: 512m
+      NEO4J_server_memory_heap_max__size: 1G
+      NEO4J_server_memory_pagecache_size: 512m
+    ports:
+      - "${NEO4J_HTTP_EXPOSE_PORT:-7474}:7474"
+      - "${NEO4J_BOLT_EXPOSE_PORT:-7687}:7687"
+    volumes:
+      - neo4j-data:/data
+      - neo4j-logs:/logs
+    healthcheck:
+      test: [CMD-SHELL, "wget -qO- http://localhost:7474 >/dev/null || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+    networks: [taxmind]
+
+networks:
+  taxmind:
+    driver: bridge
+
+volumes:
+  mysql-data:
+  redis-data:
+  minio-data:
+  etcd-data:
+  milvus-data:
+  neo4j-data:
+  neo4j-logs:

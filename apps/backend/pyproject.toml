@@ -8,10 +8,13 @@ version = "0.1.0"
 description = "TaxMind Pro modular monolith backend"
 requires-python = ">=3.12,<3.13"
 dependencies = [
+  "alembic>=1.16,<2",
+  "asyncmy>=0.2.10,<1",
   "fastapi>=0.116,<1",
   "orjson>=3.11,<4",
   "pydantic>=2.11,<3",
   "pydantic-settings>=2.10,<3",
+  "sqlalchemy[asyncio]>=2.0.41,<3",
   "uvicorn[standard]>=0.35,<1",
 ]
 
