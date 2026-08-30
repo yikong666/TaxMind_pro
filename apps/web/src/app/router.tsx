@@ -1,10 +1,15 @@
 import { createBrowserRouter } from 'react-router-dom';
 
-import { BootstrapPage } from '@/pages/BootstrapPage';
+import { LoginPage } from '@/pages/LoginPage';
+import { PolicySearchPage } from '@/pages/PolicySearchPage';
 
 export const appRouter = createBrowserRouter([
   {
     path: '/',
-    element: <BootstrapPage />,
+    element: <LoginPage />,
+  },
+  {
+    path: '/policies',
+    element: <PolicySearchPage />,
   },
 ]);

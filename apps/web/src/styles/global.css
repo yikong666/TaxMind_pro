@@ -37,6 +37,10 @@ body,
   box-shadow: 0 8px 24px rgb(23 63 55 / 16%);
 }
 
+.policy-header {
+  justify-content: space-between;
+}
+
 .brand-title.ant-typography {
   margin: 0;
   color: #fff;
@@ -65,4 +69,59 @@ body,
 .fatal-error {
   width: min(640px, calc(100% - 48px));
   margin: 15vh auto 0;
+}
+
+.login-shell {
+  display: grid;
+  place-items: center;
+  padding: 48px 24px;
+}
+
+.login-panel {
+  width: min(480px, 100%);
+}
+
+.login-title.ant-typography {
+  margin-bottom: 4px;
+  color: #173f37;
+}
+
+.form-alert {
+  margin-bottom: 16px;
+}
+
+.policy-search-grid {
+  display: grid;
+  grid-template-columns: minmax(260px, 1.8fr) minmax(140px, 0.7fr) minmax(160px, 0.8fr) auto;
+  gap: 16px;
+  align-items: end;
+}
+
+.policy-search-action {
+  margin-bottom: 24px;
+}
+
+.policy-results .ant-list-item {
+  display: block;
+  padding: 0 0 16px;
+}
+
+.evidence-card {
+  width: 100%;
+}
+
+.evidence-content.ant-typography {
+  margin-bottom: 0;
+  white-space: pre-wrap;
+}
+
+@media (width <= 900px) {
+  .policy-search-grid {
+    grid-template-columns: 1fr;
+    gap: 0;
+  }
+
+  .policy-search-action {
+    margin-bottom: 0;
+  }
 }
