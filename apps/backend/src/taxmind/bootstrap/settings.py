@@ -88,8 +88,10 @@ class Settings(BaseSettings):
     neo4j_query_timeout_seconds: int = Field(default=5, ge=1)
     neo4j_max_path_depth: int = Field(default=4, ge=1, le=4)
 
+    # The key is supplied only through DASHSCOPE_API_KEY.  It must never be
+    # serialised into API responses, logs, source files, or audit payloads.
     dashscope_api_key: SecretStr = SecretStr("replace-me")
-    dashscope_llm_model: str = "replace-with-approved-model"
+    dashscope_llm_model: Literal["qwen-max", "qwen3-max"] = "qwen-max"
     dashscope_temperature: float = Field(default=0.1, ge=0, le=2)
     llm_timeout_seconds: int = Field(default=45, ge=1)
     llm_max_retries: int = Field(default=2, ge=0, le=2)

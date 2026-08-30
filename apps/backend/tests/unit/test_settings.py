@@ -25,6 +25,13 @@ def test_settings_reject_unknown_log_level() -> None:
         Settings(log_level="verbose")
 
 
+def test_dashscope_model_is_restricted_to_approved_models() -> None:
+    assert Settings(dashscope_llm_model="qwen3-max").dashscope_llm_model == "qwen3-max"
+
+    with pytest.raises(ValidationError):
+        Settings(dashscope_llm_model="unapproved-model")
+
+
 def test_production_rejects_placeholder_secret() -> None:
     settings = Settings(
         app_env="production",

@@ -30,6 +30,7 @@ def create_app(
         lifespan=app_lifespan,
     )
     app.state.container = resolved_container
+    app.state.services = dict(registry)
     register_middleware(app)
     register_exception_handlers(app)
     register_routers(app, registry)
