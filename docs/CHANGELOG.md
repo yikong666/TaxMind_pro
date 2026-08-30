@@ -18,6 +18,7 @@
 
 - 新增 Compose 开发基础设施：MySQL、Redis、MinIO、Milvus、Neo4j。
 - 新增 SQLAlchemy async、Alembic 与 asyncmy，以及 Identity/Tenant、审计日志的初始迁移。
+- 修正 Milvus 2.6 Standalone 的消息与对象存储启动配置，避免使用已不支持的 `minio` 存储类型。
 - 尚未接入真实登录、业务 API、客户数据或外部模型服务。
 
 影响模块：仓库基础设施、Backend Bootstrap、Web Bootstrap、Contracts。
