@@ -9,6 +9,7 @@ from pydantic import BaseModel, ConfigDict, Field, JsonValue
 from taxmind.entrypoints.api.dependencies import current_principal
 from taxmind.modules.cases.application.service import (
     CasesService,
+    ConfirmFactsCommand,
     CreateCaseCommand,
     CreateProfileCommand,
     FactInput,
@@ -66,6 +67,15 @@ class CreateProfileRequest(BaseModel):
     subject_profile: SubjectProfilePayload
 
 
+class ConfirmFactsRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    profile_version: int = Field(ge=1)
+    fact_proposals: list[FactPayload] = Field(min_length=1, max_length=50)
+    confirmed_fact_keys: list[str] = Field(default_factory=list, max_length=50)
+    rejected_fact_keys: list[str] = Field(default_factory=list, max_length=50)
+
+
 class CaseData(BaseModel):
     id: str
     case_no: str
@@ -100,6 +110,7 @@ class FactData(BaseModel):
     value_type: str
     value: JsonValue
     unit: str | None
+    source_type: str
     effective_date: date | None
     confirmation_status: str
 
@@ -195,6 +206,7 @@ def _fact_data(fact: CaseFactRecord) -> FactData:
         value_type=fact.value_type,
         value=fact.value,
         unit=fact.unit,
+        source_type=fact.source_type,
         effective_date=fact.effective_date,
         confirmation_status=fact.confirmation_status,
     )
@@ -257,6 +269,36 @@ async def create_profile_version(
             case_id=case_id,
             supersedes_profile_version=payload.supersedes_profile_version,
             profile=_profile_input(payload.subject_profile),
+            request_id=request.state.request_id,
+        ),
+        principal,
+    )
+    return CaseDetailResponse(data=_detail_data(detail), meta=_meta(request))
+
+
+@router.post("/cases/{case_id}/facts/confirm", response_model=CaseDetailResponse)
+async def confirm_case_facts(
+    case_id: str,
+    payload: ConfirmFactsRequest,
+    request: Request,
+    principal: Annotated[Principal, Depends(current_principal)],
+) -> CaseDetailResponse:
+    detail = await _service(request).confirm_facts(
+        ConfirmFactsCommand(
+            case_id=case_id,
+            profile_version=payload.profile_version,
+            fact_proposals=[
+                FactInput(
+                    fact_key=fact.fact_key,
+                    value_type=fact.value_type,
+                    value=fact.value,
+                    unit=fact.unit,
+                    effective_date=fact.effective_date,
+                )
+                for fact in payload.fact_proposals
+            ],
+            confirmed_fact_keys=payload.confirmed_fact_keys,
+            rejected_fact_keys=payload.rejected_fact_keys,
             request_id=request.state.request_id,
         ),
         principal,

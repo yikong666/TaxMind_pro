@@ -11,6 +11,9 @@ from taxmind.bootstrap.settings import get_settings
 from taxmind.infrastructure.mysql.base import Base
 from taxmind.infrastructure.mysql.session import create_engine
 from taxmind.modules.audit.infrastructure import models as audit_models  # noqa: F401
+from taxmind.modules.cases.infrastructure import models as cases_models  # noqa: F401
+from taxmind.modules.conversations.infrastructure import models as conversation_models  # noqa: F401
+from taxmind.modules.documents.infrastructure import models as document_models  # noqa: F401
 from taxmind.modules.identity.infrastructure import models as identity_models  # noqa: F401
 
 config = context.config

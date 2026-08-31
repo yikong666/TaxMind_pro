@@ -83,6 +83,11 @@ def build_container(
     from taxmind.infrastructure.mysql.session import create_engine, session_factory
     from taxmind.modules.cases.application.service import CasesService
     from taxmind.modules.cases.infrastructure.uow import SqlAlchemyCasesUnitOfWorkFactory
+    from taxmind.modules.conversations.application.service import ConversationsService
+    from taxmind.modules.conversations.infrastructure.memory import RedisShortMemoryAdapter
+    from taxmind.modules.conversations.infrastructure.uow import (
+        SqlAlchemyConversationsUnitOfWorkFactory,
+    )
     from taxmind.modules.documents.application.service import DocumentsService
     from taxmind.modules.documents.infrastructure.uow import SqlAlchemyDocumentsUnitOfWorkFactory
     from taxmind.modules.identity.application.service import IdentityService
@@ -101,6 +106,19 @@ def build_container(
     )
     sessions = session_factory(engine)
     cases_service = CasesService(uow_factory=SqlAlchemyCasesUnitOfWorkFactory(sessions))
+    from redis.asyncio import Redis
+
+    redis_client = Redis.from_url(settings.redis_url)
+    short_memory = RedisShortMemoryAdapter(
+        redis_client,
+        ttl_seconds=settings.short_memory_ttl_seconds,
+    )
+    conversations_service = ConversationsService(
+        uow_factory=SqlAlchemyConversationsUnitOfWorkFactory(sessions),
+        cases_service=cases_service,
+        short_memory=short_memory,
+        recent_message_limit=settings.short_memory_recent_message_limit,
+    )
     documents_service = DocumentsService(uow_factory=SqlAlchemyDocumentsUnitOfWorkFactory(sessions))
     return AppContainer(
         settings=settings,
@@ -108,9 +126,10 @@ def build_container(
         services={
             "identity": identity_service,
             "cases": cases_service,
+            "conversations": conversations_service,
             "documents": documents_service,
         },
-        shutdown_callbacks=[engine.dispose],
+        shutdown_callbacks=[short_memory.close, engine.dispose],
     )
 
 

@@ -101,6 +101,12 @@ body,
   margin-bottom: 24px;
 }
 
+.case-form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0 16px;
+}
+
 .policy-results .ant-list-item {
   display: block;
   padding: 0 0 16px;
@@ -119,6 +125,10 @@ body,
   .policy-search-grid {
     grid-template-columns: 1fr;
     gap: 0;
+  }
+
+  .case-form-grid {
+    grid-template-columns: 1fr;
   }
 
   .policy-search-action {

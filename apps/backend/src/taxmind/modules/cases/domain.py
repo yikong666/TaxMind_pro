@@ -58,6 +58,7 @@ class CaseFactRecord:
     value_type: str
     value: object
     unit: str | None
+    source_type: str
     effective_date: date | None
     confirmation_status: str
 

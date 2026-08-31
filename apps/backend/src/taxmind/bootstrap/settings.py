@@ -62,6 +62,7 @@ class Settings(BaseSettings):
     celery_broker_url: str = "redis://127.0.0.1:6379/1"
     celery_result_backend: str = "redis://127.0.0.1:6379/2"
     short_memory_ttl_seconds: int = Field(default=259200, ge=60)
+    short_memory_recent_message_limit: int = Field(default=20, ge=1, le=50)
     public_cache_ttl_seconds: int = Field(default=600, ge=1)
 
     minio_endpoint: str = "127.0.0.1:9000"

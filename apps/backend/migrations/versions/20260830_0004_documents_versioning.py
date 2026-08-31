@@ -79,7 +79,9 @@ def upgrade() -> None:
         sa.UniqueConstraint("document_id", "content_hash_sha256", name="uq_document_versions_hash"),
     )
     op.create_index(
-        "ix_document_versions_document_review", "document_versions", ["document_id", "review_status"]
+        "ix_document_versions_document_review",
+        "document_versions",
+        ["document_id", "review_status"],
     )
     op.create_foreign_key(
         "fk_source_documents_current_version",
@@ -117,9 +119,13 @@ def upgrade() -> None:
         sa.UniqueConstraint("source_chunk_id", name="uq_document_chunks_source_chunk_id"),
     )
     op.create_index(
-        "ix_document_chunks_version_order", "document_chunks", ["document_version_id", "chunk_order"]
+        "ix_document_chunks_version_order",
+        "document_chunks",
+        ["document_version_id", "chunk_order"],
     )
-    op.create_index("ix_document_chunks_document_clause", "document_chunks", ["document_id", "clause_label"])
+    op.create_index(
+        "ix_document_chunks_document_clause", "document_chunks", ["document_id", "clause_label"]
+    )
     op.create_index(
         "ix_document_chunks_search_scope",
         "document_chunks",

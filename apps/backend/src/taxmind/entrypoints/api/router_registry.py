@@ -4,6 +4,7 @@ from fastapi import FastAPI
 
 from taxmind.bootstrap.container import ServiceRegistry
 from taxmind.entrypoints.api.cases import router as cases_router
+from taxmind.entrypoints.api.conversations import router as conversations_router
 from taxmind.entrypoints.api.documents import router as documents_router
 from taxmind.entrypoints.api.health import router as health_router
 from taxmind.entrypoints.api.identity import router as identity_router
@@ -14,4 +15,5 @@ def register_routers(app: FastAPI, registry: ServiceRegistry) -> None:
     app.include_router(health_router)
     app.include_router(identity_router, prefix="/api/v1")
     app.include_router(cases_router, prefix="/api/v1")
+    app.include_router(conversations_router, prefix="/api/v1")
     app.include_router(documents_router, prefix="/api/v1")

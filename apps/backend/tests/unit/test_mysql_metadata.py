@@ -2,6 +2,8 @@ from taxmind.bootstrap.settings import Settings
 from taxmind.infrastructure.mysql.base import Base
 from taxmind.infrastructure.mysql.session import database_url
 from taxmind.modules.audit.infrastructure import models as audit_models  # noqa: F401
+from taxmind.modules.cases.infrastructure import models as cases_models  # noqa: F401
+from taxmind.modules.conversations.infrastructure import models as conversation_models  # noqa: F401
 from taxmind.modules.identity.infrastructure import models as identity_models  # noqa: F401
 
 
@@ -18,3 +20,7 @@ def test_identity_and_audit_tables_are_registered_in_shared_metadata() -> None:
     assert {"organizations", "users", "organization_members", "audit_logs"} <= set(
         Base.metadata.tables
     )
+
+
+def test_conversation_tables_are_registered_in_shared_metadata() -> None:
+    assert {"conversations", "messages", "conversation_summaries"} <= set(Base.metadata.tables)

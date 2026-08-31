@@ -169,6 +169,9 @@ export function PolicySearchPage() {
               </div>
             </Form>
           </Card>
+          <Button onClick={() => void navigate(`/cases${isPreview ? '?preview=1' : ''}`)}>
+            前往事项工作台
+          </Button>
           <section aria-live="polite">
             {!isPreview && search.isFetching ? <Spin tip="正在按地区和业务日期筛选已发布证据…" /> : null}
             {!isPreview && search.isError ? (

@@ -14,4 +14,6 @@ def test_openapi_contains_case_and_immutable_profile_routes(tmp_path: Path) -> N
     assert "/api/v1/cases" in schema["paths"]
     assert "/api/v1/cases/{case_id}" in schema["paths"]
     assert "/api/v1/cases/{case_id}/profiles" in schema["paths"]
+    assert "/api/v1/cases/{case_id}/facts/confirm" in schema["paths"]
     assert "data_classification" in str(schema["components"]["schemas"])
+    assert "confirmed_fact_keys" in str(schema["components"]["schemas"])

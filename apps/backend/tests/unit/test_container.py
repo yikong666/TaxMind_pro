@@ -30,6 +30,7 @@ async def test_default_container_wires_identity_service_without_connecting_mysql
 
     assert results["mysql"].status == "not_configured"
     assert "identity" in wire_services(container)
+    assert "conversations" in wire_services(container)
     assert "documents" in wire_services(container)
     await container.shutdown()
 

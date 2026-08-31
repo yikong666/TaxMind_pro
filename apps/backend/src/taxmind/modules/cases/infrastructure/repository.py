@@ -70,6 +70,7 @@ def _fact_record(model: CaseFactModel) -> CaseFactRecord:
         value_type=model.value_type,
         value=model.value_json,
         unit=model.unit,
+        source_type=model.source_type,
         effective_date=model.effective_date,
         confirmation_status=model.confirmation_status,
     )
@@ -143,7 +144,7 @@ class SqlAlchemyCasesRepository:
                     value_type=record.value_type,
                     value_json=record.value,
                     unit=record.unit,
-                    source_type="user_input",
+                    source_type=record.source_type,
                     confirmation_status=record.confirmation_status,
                     effective_date=record.effective_date,
                     confirmed_by=actor_id,
