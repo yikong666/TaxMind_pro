@@ -1,5 +1,82 @@
 # Changelog
 
+## 2026-08-31 - Stage 6 阶段验收
+
+- 以 MySQL Docker 集成链路验证：资料导入后的候选审核、发布批次、待激活快照、Outbox 状态、投影状态与激活审计可在同一受控流程回放。
+- Milvus 与 Neo4j Adapter 分别以独立虚构样本完成实际 Docker 写入/读取验证；Worker 路由、MySQL 载荷读取、抽样校验及别名门禁由自动化测试覆盖。
+- 不将虚构集合设为正式别名，不导入真实税务资料，不自动对外发布或激活未审核知识。
+
+影响模块：Knowledge Projection、Worker Outbox、Milvus、Neo4j、Snapshot Activation、Integration Tests。
+
+迁移与回滚：无 MySQL 迁移；本阶段代码回滚不会删除主数据或切换正式别名。
+
+## 2026-08-31 - Stage 6.6 投影抽样校验与别名门禁
+
+- 新增 Milvus 快照抽样校验器：从 MySQL 快照重建受控载荷，读取版本化集合中的样本条款并核对快照 ID。
+- 仅校验通过才允许切换 `policy_chunks_current`；校验失败不会更改别名。
+- 本步没有把现有虚构集合切换为正式别名，也不会绕过既有快照激活审核门禁。
+
+影响模块：Milvus Projection Smoke Check、Versioned Alias Gate、Unit Tests。
+
+迁移与回滚：无 MySQL 迁移；回滚不会改变当前别名或已激活快照。
+
+## 2026-08-31 - Stage 6.5 Worker 快照投影执行
+
+- Worker 从 MySQL 知识快照读取已审核候选及真实资料版本，构造带来源、校验和与快照 ID 的 Milvus 条款和 Neo4j 文档-条款关系载荷。
+- Outbox 执行器按事件类型单向路由至对应 Adapter；开发环境仅在 `embedding_provider=fake` 时使用确定性开发向量，生产环境保持未配置执行端，避免把测试向量写入正式索引。
+- MySQL 仍是唯一主数据源；不提供 API 直接投影、正式别名切换或自动激活。
+
+影响模块：Worker Outbox、Knowledge Snapshot Projection Payload、Milvus/Neo4j Adapter、MySQL Integration Tests。
+
+迁移与回滚：无 MySQL 迁移；回滚 Worker 接线不会删除 MySQL 快照或 Outbox 记录。
+
+## 2026-08-31 - Stage 6.4 快照激活门禁
+
+- 新增知识快照激活应用服务：仅具备 `knowledge:review` 权限的人员可请求激活仍处于 `pending_activation` 的快照。
+- 激活前必须确认 Milvus 政策投影与 Neo4j 图谱投影均以同一快照清单版本成功同步，并执行可注入的受控抽样校验；任一条件不满足均保留待激活状态。
+- 激活、审核人和激活时间在同一 MySQL 事务内写入，并记录 `knowledge.snapshot.activated` 审计事件；未提供 API 自动激活入口，也未切换 Milvus 别名。
+
+影响模块：Backend Knowledge Snapshot Activation、Projection Sync State、Audit、MySQL Integration Tests。
+
+迁移与回滚：无 MySQL 迁移；回滚应用逻辑不会自动改变已激活快照，需由后续受控版本切换流程处理。
+
+## 2026-08-31 - Stage 6.3 Neo4j 关系投影
+
+- 新增 Neo4j 图谱投影 Adapter，使用关系 ID 的 `MERGE` 保证重复投递不重复创建关系。
+- 每条关系保留快照、来源条款、来源地址、关系类型和内容校验和；不接收客户端 Cypher。
+- 已用本地 Neo4j 的独立 stage63 虚构关系验证写入和只读计数；未写入真实资料或激活快照。
+
+## 2026-08-31 - Stage 6.2c 政策向量载荷对齐
+
+- 政策投影契约新增固定测试向量字段；Adapter 将其映射为 Milvus `dense_vector` 写入载荷。
+- 仍强制保留快照、来源、审核状态和内容校验和；不允许空向量进入投影契约。
+- 正式版本化集合 bootstrap、索引与别名切换仍未执行。
+
+## 2026-08-31 - Stage 6.2d 版本化集合 Bootstrap 验证
+
+- 新增版本化 Milvus 政策集合 bootstrap：显式字符串主键长度、稠密向量字段和 AUTOINDEX/COSINE 索引，动态字段保留可追溯元数据。
+- 已在独立 `policy_chunks_v1_stage62` 测试集合通过 Adapter 写入、flush、加载和主键读取虚构已审核条款；不使用正式别名、不激活快照。
+
+## 2026-08-31 - Stage 6.2 Milvus 政策投影 Adapter
+
+- 新增官方 pymilvus 客户端依赖与政策投影 Adapter；Adapter 只接收 6.1 的已审核、可溯源契约记录。
+- 同一批写入必须属于一个快照，并随写入携带幂等键、条款/资料版本、地区、有效期、审核状态和内容校验和。
+- 本步尚未创建集合、生成嵌入或把快照切换为 active；正式向量字段与检索入口留待后续步骤。
+
+影响模块：Backend Milvus Projection Adapter、Dependencies、Unit Tests。
+
+迁移与回滚：无 MySQL 迁移；回滚依赖和 Adapter 代码不会删除任何 MySQL 主数据或激活快照。
+
+## 2026-08-31 - Stage 6.1 投影 Adapter 契约
+
+- 新增 Milvus 政策条款与 Neo4j 关系投影的独立数据契约及可替换 Port；所有记录必须绑定快照、来源条款、来源地址和内容校验和。
+- 契约拒绝非已发布条款、缺失来源或非法校验和；投影结果只描述投影状态，不包含或暗示快照激活。
+- 本步不安装外部数据库 SDK、不执行外部写入，也不变更 MySQL 主数据或快照状态。
+
+影响模块：Backend Projection Contracts、Knowledge Snapshot Boundary、Unit Tests。
+
+迁移与回滚：无数据库迁移；回滚移除契约代码即可，既有 Outbox 和快照不受影响。
+
 ## 2026-08-31 - Stage 5.7 Celery Outbox 调度基线
 
 - 新增 Celery Worker 与 Beat 配置，Redis 使用独立 broker/result database；任务仅接受 JSON，禁用 pickle，启用确认后消费与单任务预取。

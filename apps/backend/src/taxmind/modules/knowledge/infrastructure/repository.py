@@ -26,6 +26,7 @@ from taxmind.modules.knowledge.domain import (
     KnowledgeSnapshotRecord,
     OutboxEventRecord,
     ProjectionSyncStateRecord,
+    SnapshotProjectionCandidateRecord,
 )
 from taxmind.modules.knowledge.infrastructure.models import (
     KnowledgeCandidateBatchModel,
@@ -179,6 +180,38 @@ def _publish_batch_record(model: KnowledgePublishBatchModel) -> KnowledgePublish
         submitted_at=_as_utc(model.submitted_at),
         published_at=_as_utc(model.published_at) if model.published_at else None,
         created_at=_as_utc(model.created_at),
+    )
+
+
+def _snapshot_record(model: KnowledgeSnapshotModel) -> KnowledgeSnapshotRecord:
+    return KnowledgeSnapshotRecord(
+        id=model.id,
+        org_id=model.org_id,
+        snapshot_code=model.snapshot_code,
+        snapshot_type=model.snapshot_type,
+        status=model.status,
+        base_snapshot_id=model.base_snapshot_id,
+        description=model.description,
+        manifest_hash=model.manifest_hash,
+        activated_at=_as_utc(model.activated_at) if model.activated_at else None,
+        activated_by=model.activated_by,
+        created_at=_as_utc(model.created_at),
+    )
+
+
+def _projection_sync_state_record(model: ProjectionSyncStateModel) -> ProjectionSyncStateRecord:
+    return ProjectionSyncStateRecord(
+        id=model.id,
+        projection_type=model.projection_type,
+        aggregate_type=model.aggregate_type,
+        aggregate_id=model.aggregate_id,
+        source_version=model.source_version,
+        target_version=model.target_version,
+        status=model.status,
+        last_event_id=model.last_event_id,
+        synced_at=_as_utc(model.synced_at) if model.synced_at else None,
+        error_safe=model.error_safe,
+        updated_at=_as_utc(model.updated_at),
     )
 
 
@@ -396,6 +429,23 @@ class SqlAlchemyKnowledgeRepository:
             )
         )
 
+    async def get_snapshot(
+        self, snapshot_id: str, *, lock: bool = False
+    ) -> KnowledgeSnapshotRecord | None:
+        statement = select(KnowledgeSnapshotModel).where(KnowledgeSnapshotModel.id == snapshot_id)
+        if lock:
+            statement = statement.with_for_update()
+        model = await self._session.scalar(statement)
+        return _snapshot_record(model) if model else None
+
+    async def activate_snapshot(self, record: KnowledgeSnapshotRecord) -> None:
+        model = await self._session.get(KnowledgeSnapshotModel, record.id)
+        if model is None:
+            raise RuntimeError("knowledge snapshot disappeared before activation")
+        model.status = record.status
+        model.activated_at = record.activated_at
+        model.activated_by = record.activated_by
+
     async def create_snapshot_items(self, records: list[KnowledgeSnapshotItemRecord]) -> None:
         self._session.add_all(
             [
@@ -410,6 +460,33 @@ class SqlAlchemyKnowledgeRepository:
                 for r in records
             ]
         )
+
+    async def list_snapshot_projection_candidates(
+        self, snapshot_id: str
+    ) -> list[SnapshotProjectionCandidateRecord]:
+        rows = await self._session.execute(
+            select(KnowledgeCandidateModel, KnowledgeCandidateBatchModel.document_version_id)
+            .join(
+                KnowledgeSnapshotItemModel,
+                KnowledgeSnapshotItemModel.item_id == KnowledgeCandidateModel.id,
+            )
+            .join(
+                KnowledgeCandidateBatchModel,
+                KnowledgeCandidateBatchModel.id == KnowledgeCandidateModel.batch_id,
+            )
+            .where(
+                KnowledgeSnapshotItemModel.snapshot_id == snapshot_id,
+                KnowledgeSnapshotItemModel.item_type == "policy_clause",
+            )
+            .order_by(KnowledgeSnapshotItemModel.id)
+        )
+        return [
+            SnapshotProjectionCandidateRecord(
+                candidate=_candidate_record(candidate),
+                document_version_id=document_version_id,
+            )
+            for candidate, document_version_id in rows.all()
+        ]
 
     async def create_outbox_events(self, records: list[OutboxEventRecord]) -> None:
         self._session.add_all(
@@ -528,12 +605,26 @@ class SqlAlchemyKnowledgeRepository:
         model.error_safe = record.error_safe
         model.updated_at = record.updated_at
 
+    async def list_projection_sync_states(
+        self, snapshot_id: str
+    ) -> list[ProjectionSyncStateRecord]:
+        models = await self._session.scalars(
+            select(ProjectionSyncStateModel)
+            .where(
+                ProjectionSyncStateModel.aggregate_type == "knowledge_snapshot",
+                ProjectionSyncStateModel.aggregate_id == snapshot_id,
+            )
+            .order_by(ProjectionSyncStateModel.projection_type, ProjectionSyncStateModel.updated_at)
+        )
+        return [_projection_sync_state_record(model) for model in models]
+
     async def create_audit_log(
         self,
         *,
         org_id: str,
         actor_user_id: str,
         action_code: str,
+        resource_type: str = "knowledge_candidate_batch",
         resource_id: str,
         request_id: str,
         occurred_at: datetime,
@@ -543,7 +634,7 @@ class SqlAlchemyKnowledgeRepository:
                 org_id=org_id,
                 actor_user_id=actor_user_id,
                 action_code=action_code,
-                resource_type="knowledge_candidate_batch",
+                resource_type=resource_type,
                 resource_id=resource_id,
                 request_id=request_id,
                 result="success",

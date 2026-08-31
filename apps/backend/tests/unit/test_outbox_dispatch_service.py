@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from dataclasses import replace
 from datetime import UTC, datetime
 from typing import cast
 
@@ -7,12 +8,23 @@ import pytest
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from taxmind.bootstrap.settings import Settings
-from taxmind.entrypoints.worker.outbox import build_outbox_dispatch_service
+from taxmind.entrypoints.worker.outbox import (
+    SnapshotProjectionExecutor,
+    build_outbox_dispatch_service,
+)
+from taxmind.infrastructure.projections.contracts import (
+    MilvusPolicyProjectionPort,
+    Neo4jGraphProjectionPort,
+    ProjectionWriteResult,
+)
 from taxmind.modules.knowledge.application.outbox_dispatch_service import (
     OutboxDispatchService,
     OutboxDispatchUowFactory,
     ProjectionExecutionError,
     ProjectionExecutor,
+)
+from taxmind.modules.knowledge.application.projection_payload_service import (
+    SnapshotProjectionPayload,
 )
 from taxmind.modules.knowledge.domain import OutboxEventRecord, ProjectionSyncStateRecord
 
@@ -96,6 +108,27 @@ class _Executor:
             raise self.error
 
 
+class _Loader:
+    async def load(self, snapshot_id: str) -> SnapshotProjectionPayload:
+        assert snapshot_id == "snapshot-1"
+        return SnapshotProjectionPayload(policy_records=[], graph_records=[])
+
+
+class _Adapter:
+    def __init__(self) -> None:
+        self.calls: list[str] = []
+
+    async def upsert_policy_snapshot(
+        self, records: list[object], *, idempotency_key: str
+    ) -> object:
+        self.calls.append(idempotency_key)
+        return ProjectionWriteResult("milvus_policy", "snapshot-1", len(records), "succeeded")
+
+    async def upsert_graph_snapshot(self, records: list[object], *, idempotency_key: str) -> object:
+        self.calls.append(idempotency_key)
+        return ProjectionWriteResult("neo4j_graph", "snapshot-1", len(records), "succeeded")
+
+
 def _service(
     repository: _Repository, executor: _Executor, *, max_attempts: int = 3
 ) -> OutboxDispatchService:
@@ -121,6 +154,22 @@ async def test_dispatch_marks_successful_projection_event_done_and_tracks_sync_s
     assert repository.completed == ["event-1"]
     assert repository.failures == []
     assert repository.sync_states[0].status == "succeeded"
+
+
+async def test_snapshot_projection_executor_routes_each_outbox_event_to_its_adapter() -> None:
+    adapter = _Adapter()
+    executor = SnapshotProjectionExecutor(
+        loader=_Loader(),
+        policy_adapter=cast(MilvusPolicyProjectionPort, adapter),
+        graph_adapter=cast(Neo4jGraphProjectionPort, adapter),
+    )
+
+    await executor.execute(_event())
+    await executor.execute(
+        replace(_event(event_id="graph-1"), event_type="projection.graph_snapshot.requested")
+    )
+
+    assert len(adapter.calls) == 2
 
 
 async def test_dispatch_schedules_retry_without_recording_external_projection_success() -> None:

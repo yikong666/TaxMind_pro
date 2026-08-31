@@ -92,6 +92,12 @@ class KnowledgeSnapshotItemRecord:
 
 
 @dataclass(frozen=True, slots=True)
+class SnapshotProjectionCandidateRecord:
+    candidate: KnowledgeCandidateRecord
+    document_version_id: str
+
+
+@dataclass(frozen=True, slots=True)
 class OutboxEventRecord:
     id: str
     aggregate_type: str

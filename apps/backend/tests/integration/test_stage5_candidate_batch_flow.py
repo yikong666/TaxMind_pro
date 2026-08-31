@@ -20,6 +20,11 @@ from taxmind.modules.documents.application.service import (
 )
 from taxmind.modules.documents.infrastructure.repository import SqlAlchemyDocumentsRepository
 from taxmind.modules.identity.infrastructure.models import OrganizationModel, UserModel
+from taxmind.modules.knowledge.application.activation_service import (
+    KnowledgeSnapshotActivationService,
+    ProjectionSmokeVerifier,
+    SnapshotActivationUowFactory,
+)
 from taxmind.modules.knowledge.application.outbox_dispatch_service import (
     OutboxDispatchService,
     OutboxDispatchUowFactory,
@@ -38,6 +43,7 @@ from taxmind.modules.knowledge.application.snapshot_service import (
 )
 from taxmind.modules.knowledge.domain import OutboxEventRecord
 from taxmind.modules.knowledge.infrastructure.models import (
+    KnowledgeSnapshotModel,
     OutboxEventModel,
     ProjectionSyncStateModel,
 )
@@ -102,11 +108,16 @@ class _SuccessfulProjectionExecutor:
         }
 
 
+class _PassingProjectionSmokeVerifier:
+    async def verify(self, snapshot: object) -> bool:
+        return snapshot is not None
+
+
 @pytest.mark.skipif(
     os.getenv("TAXMIND_RUN_INTEGRATION") != "1",
     reason="requires the local MySQL Compose service",
 )
-async def test_candidate_batch_is_reviewed_validated_and_materialized_without_projection() -> None:
+async def test_candidate_batch_is_reviewed_validated_projected_and_activated() -> None:
     engine = create_engine(Settings(app_env="test"))
     session = AsyncSession(engine, expire_on_commit=False)
     transaction = await session.begin()
@@ -264,6 +275,9 @@ async def test_candidate_batch_is_reviewed_validated_and_materialized_without_pr
                 )
             )
         )
+        projection_candidates = await SqlAlchemyKnowledgeRepository(
+            session
+        ).list_snapshot_projection_candidates(snapshot.snapshot.id)
 
         assert created.created is True
         assert created.batch.model_name is None
@@ -284,6 +298,8 @@ async def test_candidate_batch_is_reviewed_validated_and_materialized_without_pr
             "projection.graph_snapshot.requested",
         }
         assert all(event.status == "pending" for event in outbox_events)
+        assert projection_candidates[0].candidate.id == created.candidates[0].id
+        assert projection_candidates[0].document_version_id == detail.version.id
         dispatch_result = await OutboxDispatchService(
             uow_factory=cast(
                 OutboxDispatchUowFactory,
@@ -311,6 +327,25 @@ async def test_candidate_batch_is_reviewed_validated_and_materialized_without_pr
         assert dispatch_result.retryable_count == 0
         assert {event.status for event in dispatched_events} == {"done"}
         assert {state.status for state in sync_states} == {"succeeded"}
+        activated = await KnowledgeSnapshotActivationService(
+            uow_factory=cast(
+                SnapshotActivationUowFactory,
+                _SharedKnowledgeUnitOfWorkFactory(session),
+            ),
+            projection_smoke_verifier=cast(
+                ProjectionSmokeVerifier, _PassingProjectionSmokeVerifier()
+            ),
+        ).activate_snapshot(
+            snapshot.snapshot.id,
+            request_id=new_id(),
+            principal=reviewer,
+        )
+        activated_model = await session.get(KnowledgeSnapshotModel, snapshot.snapshot.id)
+        assert activated.snapshot.status == "active"
+        assert activated.snapshot.activated_by == reviewer_id
+        assert activated_model is not None
+        assert activated_model.status == "active"
+        assert activated_model.activated_at is not None
     finally:
         if transaction.is_active:
             await transaction.rollback()
