@@ -15,3 +15,5 @@ def test_openapi_contains_document_review_and_exact_search_routes(tmp_path: Path
     assert "/api/v1/knowledge/document-versions/{version_id}/submit-review" in schema["paths"]
     assert "/api/v1/knowledge/document-versions/{version_id}/publish" in schema["paths"]
     assert "/api/v1/policies/search" in schema["paths"]
+    evidence_schema = schema["components"]["schemas"]["PolicyEvidenceData"]
+    assert evidence_schema["properties"]["retrieval_reason"]["type"] == "string"

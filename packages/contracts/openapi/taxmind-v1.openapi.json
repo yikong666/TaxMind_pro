@@ -2288,6 +2288,10 @@
             "title": "Region Match",
             "type": "string"
           },
+          "retrieval_reason": {
+            "title": "Retrieval Reason",
+            "type": "string"
+          },
           "version": {
             "$ref": "#/components/schemas/taxmind__entrypoints__api__documents__VersionData"
           }
@@ -2296,7 +2300,8 @@
           "document",
           "version",
           "chunk",
-          "region_match"
+          "region_match",
+          "retrieval_reason"
         ],
         "title": "PolicyEvidenceData",
         "type": "object"

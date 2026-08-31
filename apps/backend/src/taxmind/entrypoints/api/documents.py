@@ -138,6 +138,7 @@ class PolicyEvidenceData(BaseModel):
     version: VersionData
     chunk: ChunkData
     region_match: str
+    retrieval_reason: str
 
 
 class PolicySearchResponse(BaseModel):
@@ -260,6 +261,7 @@ def _evidence_data(evidence: PolicyEvidence) -> PolicyEvidenceData:
         version=_version_data(evidence.version),
         chunk=_chunk_data(evidence.chunk),
         region_match=evidence.region_match,
+        retrieval_reason="mysql_exact",
     )
 
 

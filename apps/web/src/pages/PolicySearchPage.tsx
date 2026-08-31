@@ -72,6 +72,7 @@ const previewData: PolicySearchResponse = {
         index_status: 'pending',
       },
       region_match: 'national_only',
+      retrieval_reason: 'mysql_exact',
     },
   ],
   meta: { request_id: 'preview-only' },
@@ -198,6 +199,11 @@ export function PolicySearchPage() {
                           <Tag color="green">已发布</Tag>
                           <Tag>{evidence.document.doc_no ?? '无文号'}</Tag>
                           <Tag>{evidence.chunk.clause_label ?? evidence.chunk.heading_path}</Tag>
+                          <Tag color="cyan">
+                            {evidence.retrieval_reason === 'mysql_exact'
+                              ? '精确检索'
+                              : '受控检索'}
+                          </Tag>
                           {evidence.region_match === 'national_only' ? (
                             <Tag color="gold">全国口径回退</Tag>
                           ) : (
