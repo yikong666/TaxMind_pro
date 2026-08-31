@@ -81,6 +81,7 @@ def build_container(
 ) -> AppContainer:
     selected = tuple(probes) if probes is not None else (NotConfiguredProbe(name="mysql"),)
     from taxmind.infrastructure.mysql.session import create_engine, session_factory
+    from taxmind.infrastructure.object_storage.minio import create_minio_object_store
     from taxmind.modules.cases.application.service import CasesService
     from taxmind.modules.cases.infrastructure.uow import SqlAlchemyCasesUnitOfWorkFactory
     from taxmind.modules.conversations.application.service import ConversationsService
@@ -88,6 +89,7 @@ def build_container(
     from taxmind.modules.conversations.infrastructure.uow import (
         SqlAlchemyConversationsUnitOfWorkFactory,
     )
+    from taxmind.modules.documents.application.import_service import ManualImportService
     from taxmind.modules.documents.application.service import DocumentsService
     from taxmind.modules.documents.infrastructure.uow import SqlAlchemyDocumentsUnitOfWorkFactory
     from taxmind.modules.identity.application.service import IdentityService
@@ -96,6 +98,12 @@ def build_container(
         JwtTokenService,
     )
     from taxmind.modules.identity.infrastructure.uow import SqlAlchemyIdentityUnitOfWorkFactory
+    from taxmind.modules.knowledge.application.review_service import KnowledgeReviewService
+    from taxmind.modules.knowledge.application.service import KnowledgeCandidatesService
+    from taxmind.modules.knowledge.application.snapshot_service import KnowledgeSnapshotService
+    from taxmind.modules.knowledge.infrastructure.uow import SqlAlchemyKnowledgeUnitOfWorkFactory
+    from taxmind.modules.sources.application.service import SourcesService
+    from taxmind.modules.sources.infrastructure.uow import SqlAlchemySourcesUnitOfWorkFactory
 
     engine = create_engine(settings)
     identity_service = IdentityService(
@@ -120,6 +128,23 @@ def build_container(
         recent_message_limit=settings.short_memory_recent_message_limit,
     )
     documents_service = DocumentsService(uow_factory=SqlAlchemyDocumentsUnitOfWorkFactory(sessions))
+    sources_service = SourcesService(uow_factory=SqlAlchemySourcesUnitOfWorkFactory(sessions))
+    knowledge_candidates_service = KnowledgeCandidatesService(
+        uow_factory=SqlAlchemyKnowledgeUnitOfWorkFactory(sessions)
+    )
+    knowledge_review_service = KnowledgeReviewService(
+        uow_factory=SqlAlchemyKnowledgeUnitOfWorkFactory(sessions)
+    )
+    knowledge_snapshot_service = KnowledgeSnapshotService(
+        uow_factory=SqlAlchemyKnowledgeUnitOfWorkFactory(sessions)
+    )
+    manual_import_service = ManualImportService(
+        sources=sources_service,
+        documents=documents_service,
+        object_store=create_minio_object_store(settings),
+        raw_bucket=settings.minio_raw_bucket,
+        max_bytes=settings.ingestion_max_bytes,
+    )
     return AppContainer(
         settings=settings,
         probes={probe.name: probe for probe in selected},
@@ -128,6 +153,11 @@ def build_container(
             "cases": cases_service,
             "conversations": conversations_service,
             "documents": documents_service,
+            "sources": sources_service,
+            "manual_import": manual_import_service,
+            "knowledge_candidates": knowledge_candidates_service,
+            "knowledge_review": knowledge_review_service,
+            "knowledge_snapshot": knowledge_snapshot_service,
         },
         shutdown_callbacks=[short_memory.close, engine.dispose],
     )

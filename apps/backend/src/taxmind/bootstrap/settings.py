@@ -61,6 +61,11 @@ class Settings(BaseSettings):
     redis_url: str = "redis://127.0.0.1:6379/0"
     celery_broker_url: str = "redis://127.0.0.1:6379/1"
     celery_result_backend: str = "redis://127.0.0.1:6379/2"
+    outbox_dispatch_batch_size: int = Field(default=50, ge=1, le=200)
+    outbox_max_attempts: int = Field(default=3, ge=1, le=10)
+    outbox_retry_delay_seconds: int = Field(default=30, ge=1, le=3600)
+    outbox_dispatch_interval_seconds: int = Field(default=60, ge=60, le=3600)
+    worker_task_time_limit_seconds: int = Field(default=300, ge=30, le=3600)
     short_memory_ttl_seconds: int = Field(default=259200, ge=60)
     short_memory_recent_message_limit: int = Field(default=20, ge=1, le=50)
     public_cache_ttl_seconds: int = Field(default=600, ge=1)

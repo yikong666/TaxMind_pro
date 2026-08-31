@@ -1,5 +1,83 @@
 # Changelog
 
+## 2026-08-31 - Stage 5.7 Celery Outbox 调度基线
+
+- 新增 Celery Worker 与 Beat 配置，Redis 使用独立 broker/result database；任务仅接受 JSON，禁用 pickle，启用确认后消费与单任务预取。
+- 新增 `taxmind.outbox.dispatch.v1` 维护任务和保守的 60 秒默认调度；任务调用既有 Outbox 服务，投影执行端未配置时仍只进入受控重试。
+- 新增 `make worker` 与 `make scheduler` 本地入口；尚未加入容器化 Worker，也未接入真实 Milvus/Neo4j Adapter 或快照激活。
+
+影响模块：Backend Worker、Celery、Redis Queue、Outbox、Settings、Local Development Commands。
+
+迁移与回滚：无数据库迁移。回滚应用和依赖锁文件即可停止 Beat 调度；已有 Outbox 事件仍保留在 MySQL，且不会被 API 直接投影。
+
+## 2026-08-31 - Stage 5.6 Outbox 受控消费与投影状态
+
+- 新增 Worker 可调用的 Outbox 消费服务：以 MySQL 行锁领取 `pending` / `retryable` 投影事件，再以独立事务记录完成、可重试或死信结果。
+- 新增 `projection_sync_states` 幂等状态写入；成功、失败和重试不会通过 API 直接双写 Milvus 或 Neo4j。
+- 失败只记录稳定安全错误码；默认执行端为未配置状态，会进入受控重试而不会虚报外部投影已完成。超过配置的尝试次数后事件进入 `dead`。
+- 新增批量大小、最大尝试次数和重试延迟配置，并提供 Worker 侧服务工厂；尚未接入 Celery 调度及真实 Milvus/Neo4j Adapter。
+
+影响模块：Backend Knowledge Outbox、Projection Sync State、Worker Entry Point、Settings、MySQL Integration Tests。
+
+迁移与回滚：复用 Alembic `20260831_0006` 的 Outbox 与投影状态表；回滚应用会停止新的消费逻辑，不会删除已记录的处理结果或死信状态。
+
+## 2026-08-31 - Stage 5.5 知识快照草稿与投影 Outbox
+
+- 仅允许已验证通过的发布批次物化为 `pending_activation` 公共知识快照；快照保留批次摘要和候选来源校验和，尚未激活。
+- 创建快照及条目后，在同一 MySQL 事务写入两条待处理 Outbox 事件：政策检索投影与图谱投影请求；API 不直接写入 Milvus 或 Neo4j。
+- 新增快照物化 API 与审核审计事件；响应明确返回待处理投影事件数量，不把快照误标为已上线。
+
+影响模块：Backend Knowledge Snapshot、Outbox、Audit、API Contracts、MySQL Integration Tests。
+
+迁移与回滚：复用 Alembic `20260831_0006` 的知识快照、条目与 Outbox 表；回滚应用会停止新快照物化，不会自动删除已生成的待激活快照或 Outbox 事件。
+
+## 2026-08-31 - Stage 5.4 知识候选人工审核与发布验证门禁
+
+- 新增候选人工审核：仅 `knowledge:review` 可决定 `approved` 或 `rejected`，驳回必须填写安全原因；候选抽取者不得审核自己的候选。
+- 审核结果保存审核人和审核时间，并记录 `knowledge.candidate.reviewed` 审计事件；候选不会因审核通过自动进入正式检索。
+- 新增待验证发布批次：仅已审核通过的候选可被纳入不可变 checksum 清单，批次初始状态为 `pending_validation`。
+- 新增发布批次验证：校验候选数、审核状态、来源条款与清单摘要，结果为 `validated` 或 `validation_failed`，不创建快照、不写 Outbox、不投影到 Milvus/Neo4j。
+- 新增 Alembic `20260831_0007`，为候选增加审核人和审核时间追溯字段。
+
+影响模块：Backend Knowledge Review、Knowledge Candidate、Audit、API Contracts、MySQL Integration Tests。
+
+迁移与回滚：升级至 Alembic `20260831_0007`；降级只移除候选审核人/时间字段，执行前应确认没有需要保留的审核追溯数据。发布批次和候选主数据仍由 `20260831_0006` 管理。
+
+## 2026-08-31 - Stage 5.3 知识候选抽取与审核前队列
+
+- 新增对已解析 `draft` 资料版本的确定性候选抽取：每条可引用条款生成一条 `policy_clause` 候选，并以相同资料版本和抽取器版本保证幂等。
+- 每个候选强制保留来源资料、来源条款、原文摘要、地区、有效期、抽取方法、置信度与 `pending_review` 状态；候选仅进入审核前队列，不会成为正式检索依据。
+- 新增候选批次创建与待审核队列 API；候选批次不接收模型、Prompt、发布或投影输入，当前实现也不会调用外部模型。
+- 已拒绝已发布、未解析或非草稿资料进入候选抽取；创建过程写入 `knowledge.candidate_batch.created` 审计事件。
+
+影响模块：Backend Knowledge Candidates、Documents Read Model、Audit、API Contracts、MySQL Integration Tests。
+
+迁移与回滚：复用 Alembic `20260831_0006` 的候选批次与候选表；回滚应用会停止候选生成与队列读取，但不会将未审核候选发布或写入检索投影。
+
+## 2026-08-31 - Stage 5.2 手工资料导入与确定性解析
+
+- 新增 `POST /api/v1/knowledge/uploads`：接收来源、资料元数据和受控文件，创建可幂等回查的导入任务；新增 `GET /api/v1/knowledge/jobs/{job_id}`。
+- 原件以内容 SHA-256 写入私有 MinIO `taxmind-raw`；同对象键仅允许相同内容复用，冲突内容会被拒绝覆盖。
+- 支持 UTF-8 纯文本、HTML 和带文本层的 PDF；HTML 忽略脚本/样式内容，解析结果按法条边界或段落生成资料草稿条款。
+- 成功导入只创建 `draft` 资料、版本和条款；对象存储或解析失败会把任务标为 `failed` 并写入安全错误码，不会发布正式知识。
+- 新增 `minio`、`pypdf` 与 `python-multipart` 依赖；未接入网页采集、Celery、模型调用、审核发布、Milvus 或 Neo4j 投影。
+
+影响模块：Backend Sources、Documents、MinIO Adapter、API Contracts、MySQL/MinIO Integration Tests。
+
+迁移与回滚：复用 Alembic `20260831_0006` 的导入任务与资料表；回滚应用后不会删除已留存原件，需由知识管理员按审计记录确认后单独处理。
+
+## 2026-08-31 - Stage 5.1 离线知识治理契约与数据模型
+
+- 新增官方公开来源登记与列表 API；来源默认进入 `draft`，仅登记白名单配置，不会自动采集。
+- 来源地址仅接受无凭据、无查询参数的 HTTPS 官方站点；白名单规则拒绝 Cookie、Token、密码和密钥字段，低频检查间隔不得少于 60 分钟。
+- 新增采集任务、候选批次、知识候选、发布批次、知识快照、Outbox 与投影同步状态的 MySQL 主数据契约。
+- 知识候选强制关联来源资料与条款；Milvus、Neo4j 继续作为后续可重建投影，不在 API 事务中双写。
+- 本步未实现文件解析、网页采集、模型抽取、人工审核执行或向量/图谱写入，也未调用外部模型。
+
+影响模块：Backend Sources、Knowledge Contracts、Audit、API Contracts、MySQL Migration。
+
+迁移与回滚：升级至 Alembic `20260831_0006`；降级会删除本步新增的来源与知识治理契约表，只能在确认没有需保留数据时执行。
+
 ## 2026-08-31 - Stage 4.7 会话、消息与短期记忆
 
 - 新增事项内会话创建、幂等用户消息写入、消息分页读取和上下文读取 API。
