@@ -38,6 +38,7 @@ import {
   type MessageData,
 } from '@/api/conversations';
 import { clearAccessToken, getAccessToken } from '@/api/session';
+import { submitQueryRun, type QueryRunResponse } from '@/api/queryRuns';
 import { applyPreviewFactDecision } from '@/pages/casePreview';
 
 const { Header, Content, Footer } = Layout;
@@ -136,6 +137,26 @@ const previewConversation: ConversationResponse = {
   meta: { request_id: 'preview-only' },
 };
 
+const previewQueryRun: QueryRunResponse = {
+  data: {
+    id: 'virtual-run-001',
+    status: 'need_info',
+    case_id: previewDetail.data.case.id,
+    profile_version: 1,
+    retrieval_plan: {
+      route_code: 'policy_applicability',
+      use_mysql_exact: false,
+      use_milvus_semantic: true,
+      graph_expansion_type: 'policy_conditions',
+    },
+    rule_results: [],
+    follow_up_fact_keys: ['small_low_profit_status'],
+    degradation_events: [],
+    audit_resource_id: 'virtual-run-001',
+  },
+  meta: { request_id: 'preview-only' },
+};
+
 export function CasesWorkspacePage() {
   const navigate = useNavigate();
   const [searchParameters] = useSearchParams();
@@ -150,6 +171,7 @@ export function CasesWorkspacePage() {
   const [previewVisibleCases, setPreviewVisibleCases] = useState(previewCases);
   const [activeConversation, setActiveConversation] = useState<ConversationResponse | null>(null);
   const [previewMessages, setPreviewMessages] = useState<MessageData[]>([]);
+  const [visibleQueryRun, setVisibleQueryRun] = useState<QueryRunResponse | null>(null);
   const [messageDraft, setMessageDraft] = useState('');
   const [form] = Form.useForm<CaseFormValues>();
   const [factForm] = Form.useForm<FactConfirmationFormValues>();
@@ -263,6 +285,15 @@ export function CasesWorkspacePage() {
       ]);
     },
   });
+  const queryRunMutation = useMutation({
+    mutationFn: (caseId: string) => {
+      if (accessToken === null) {
+        throw new Error('专业会话不可用');
+      }
+      return submitQueryRun(caseId, { query: '当前事项的优惠是否适用' }, accessToken);
+    },
+    onSuccess: setVisibleQueryRun,
+  });
 
   if (accessToken === null && !isPreview) {
     return <Navigate to="/" replace />;
@@ -272,6 +303,7 @@ export function CasesWorkspacePage() {
     setSelectedCaseId(caseId);
     setActiveConversation(null);
     setPreviewMessages([]);
+    setVisibleQueryRun(null);
   }
 
   function submit(values: CaseFormValues) {
@@ -351,6 +383,24 @@ export function CasesWorkspacePage() {
       caseId: visibleDetail.data.case.id,
       title: `${visibleDetail.data.case.title} · 咨询会话`,
     });
+  }
+
+  function runControlledAnalysis() {
+    if (visibleDetail === undefined) {
+      return;
+    }
+    if (isPreview) {
+      setVisibleQueryRun({
+        ...previewQueryRun,
+        data: {
+          ...previewQueryRun.data,
+          case_id: visibleDetail.data.case.id,
+          profile_version: visibleDetail.data.profile.profile_version,
+        },
+      });
+      return;
+    }
+    queryRunMutation.mutate(visibleDetail.data.case.id);
   }
 
   function sendMessage() {
@@ -612,6 +662,56 @@ export function CasesWorkspacePage() {
             >
               开始咨询会话
             </Button>
+            <Button
+              onClick={runControlledAnalysis}
+              loading={!isPreview && queryRunMutation.isPending}
+            >
+              运行受控分析
+            </Button>
+            {queryRunMutation.isError ? (
+              <Alert type="error" showIcon message="分析未完成，请检查事项权限和后端服务。" />
+            ) : null}
+            {visibleQueryRun !== null ? (
+              <Card size="small" title="受控分析运行">
+                <Space direction="vertical" size={8} className="full-width">
+                  <Space wrap>
+                    <Tag color={visibleQueryRun.data.status === 'completed' ? 'green' : 'gold'}>
+                      {visibleQueryRun.data.status === 'completed' ? '已完成' : '需要补充事实'}
+                    </Tag>
+                    {visibleQueryRun.data.retrieval_plan !== null ? (
+                      <Tag>{visibleQueryRun.data.retrieval_plan.route_code}</Tag>
+                    ) : null}
+                    <Tag>审计关联：{visibleQueryRun.data.audit_resource_id}</Tag>
+                  </Space>
+                  {visibleQueryRun.data.follow_up_fact_keys.length > 0 ? (
+                    <Alert
+                      type="warning"
+                      showIcon
+                      message={`请补充：${visibleQueryRun.data.follow_up_fact_keys.join('、')}`}
+                    />
+                  ) : null}
+                  {visibleQueryRun.data.rule_results.length === 0 ? (
+                    <Typography.Text type="secondary">
+                      当前知识快照没有已发布的适用风险规则；系统不会由模型补造规则结论。
+                    </Typography.Text>
+                  ) : (
+                    <List
+                      size="small"
+                      dataSource={visibleQueryRun.data.rule_results}
+                      renderItem={(rule) => (
+                        <List.Item>
+                          <Space wrap>
+                            <Typography.Text>{rule.rule_version_id}</Typography.Text>
+                            <Tag>{rule.status}</Tag>
+                            {rule.severity === null ? null : <Tag color="red">{rule.severity}</Tag>}
+                          </Space>
+                        </List.Item>
+                      )}
+                    />
+                  )}
+                </Space>
+              </Card>
+            ) : null}
             {createConversationMutation.isError ? (
               <Alert type="error" showIcon message="会话未创建，请检查权限和后端服务。" />
             ) : null}

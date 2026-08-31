@@ -85,6 +85,10 @@ services:
       ETCD_AUTO_COMPACTION_RETENTION: "1000"
       ETCD_QUOTA_BACKEND_BYTES: "4294967296"
       ETCD_SNAPSHOT_COUNT: "50000"
+      # Docker Desktop 文件系统偶发较长 fsync；开发环境放宽 lease 心跳容错，
+      # 避免 Milvus 因短暂 I/O 停顿错误退出。
+      ETCD_HEARTBEAT_INTERVAL: ${ETCD_HEARTBEAT_INTERVAL:-1000}
+      ETCD_ELECTION_TIMEOUT: ${ETCD_ELECTION_TIMEOUT:-10000}
     command: >-
       etcd --advertise-client-urls=http://127.0.0.1:2379
       --listen-client-urls=http://0.0.0.0:2379

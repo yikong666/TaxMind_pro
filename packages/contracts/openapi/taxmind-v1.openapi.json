@@ -2326,6 +2326,106 @@
         "title": "PolicySearchResponse",
         "type": "object"
       },
+      "QueryRunData": {
+        "properties": {
+          "audit_resource_id": {
+            "title": "Audit Resource Id",
+            "type": "string"
+          },
+          "case_id": {
+            "title": "Case Id",
+            "type": "string"
+          },
+          "degradation_events": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Degradation Events",
+            "type": "array"
+          },
+          "follow_up_fact_keys": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Follow Up Fact Keys",
+            "type": "array"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "profile_version": {
+            "title": "Profile Version",
+            "type": "integer"
+          },
+          "retrieval_plan": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/RetrievalPlanData"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "rule_results": {
+            "items": {
+              "$ref": "#/components/schemas/RuleResultData"
+            },
+            "title": "Rule Results",
+            "type": "array"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "status",
+          "case_id",
+          "profile_version",
+          "retrieval_plan",
+          "rule_results",
+          "follow_up_fact_keys",
+          "degradation_events",
+          "audit_resource_id"
+        ],
+        "title": "QueryRunData",
+        "type": "object"
+      },
+      "QueryRunRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "query": {
+            "maxLength": 4000,
+            "minLength": 1,
+            "title": "Query",
+            "type": "string"
+          }
+        },
+        "required": [
+          "query"
+        ],
+        "title": "QueryRunRequest",
+        "type": "object"
+      },
+      "QueryRunResponse": {
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/QueryRunData"
+          },
+          "meta": {
+            "$ref": "#/components/schemas/ResponseMeta"
+          }
+        },
+        "required": [
+          "data",
+          "meta"
+        ],
+        "title": "QueryRunResponse",
+        "type": "object"
+      },
       "RefreshRequest": {
         "additionalProperties": false,
         "properties": {
@@ -2434,6 +2534,87 @@
           "request_id"
         ],
         "title": "ResponseMeta",
+        "type": "object"
+      },
+      "RetrievalPlanData": {
+        "properties": {
+          "graph_expansion_type": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Graph Expansion Type"
+          },
+          "route_code": {
+            "title": "Route Code",
+            "type": "string"
+          },
+          "use_milvus_semantic": {
+            "title": "Use Milvus Semantic",
+            "type": "boolean"
+          },
+          "use_mysql_exact": {
+            "title": "Use Mysql Exact",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "route_code",
+          "use_mysql_exact",
+          "use_milvus_semantic",
+          "graph_expansion_type"
+        ],
+        "title": "RetrievalPlanData",
+        "type": "object"
+      },
+      "RuleResultData": {
+        "properties": {
+          "basis_chunk_ids": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Basis Chunk Ids",
+            "type": "array"
+          },
+          "missing_fact_keys": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Missing Fact Keys",
+            "type": "array"
+          },
+          "rule_version_id": {
+            "title": "Rule Version Id",
+            "type": "string"
+          },
+          "severity": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Severity"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "rule_version_id",
+          "status",
+          "severity",
+          "missing_fact_keys",
+          "basis_chunk_ids"
+        ],
+        "title": "RuleResultData",
         "type": "object"
       },
       "SessionData": {
@@ -3467,6 +3648,63 @@
         "summary": "Create Profile Version",
         "tags": [
           "cases"
+        ]
+      }
+    },
+    "/api/v1/cases/{case_id}/query-runs": {
+      "post": {
+        "operationId": "submit_query_run_api_v1_cases__case_id__query_runs_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "case_id",
+            "required": true,
+            "schema": {
+              "title": "Case Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/QueryRunRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QueryRunResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Submit Query Run",
+        "tags": [
+          "query-runs"
         ]
       }
     },
@@ -4631,6 +4869,48 @@
         "summary": "Search Policies",
         "tags": [
           "knowledge-documents"
+        ]
+      }
+    },
+    "/api/v1/query-runs/{run_id}": {
+      "get": {
+        "operationId": "get_query_run_api_v1_query_runs__run_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "run_id",
+            "required": true,
+            "schema": {
+              "title": "Run Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QueryRunResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Query Run",
+        "tags": [
+          "query-runs"
         ]
       }
     },

@@ -102,6 +102,8 @@ def build_container(
     from taxmind.modules.knowledge.application.service import KnowledgeCandidatesService
     from taxmind.modules.knowledge.application.snapshot_service import KnowledgeSnapshotService
     from taxmind.modules.knowledge.infrastructure.uow import SqlAlchemyKnowledgeUnitOfWorkFactory
+    from taxmind.modules.query.application.service import QueryRunService
+    from taxmind.modules.query.infrastructure.audit import SqlAlchemyQueryAuditRecorder
     from taxmind.modules.sources.application.service import SourcesService
     from taxmind.modules.sources.infrastructure.uow import SqlAlchemySourcesUnitOfWorkFactory
 
@@ -113,6 +115,10 @@ def build_container(
         token_service=JwtTokenService(settings),
     )
     sessions = session_factory(engine)
+    query_runs_service = QueryRunService(
+        rules=(),
+        audit_recorder=SqlAlchemyQueryAuditRecorder(sessions),
+    )
     cases_service = CasesService(uow_factory=SqlAlchemyCasesUnitOfWorkFactory(sessions))
     from redis.asyncio import Redis
 
@@ -151,6 +157,7 @@ def build_container(
         services={
             "identity": identity_service,
             "cases": cases_service,
+            "query_runs": query_runs_service,
             "conversations": conversations_service,
             "documents": documents_service,
             "sources": sources_service,
