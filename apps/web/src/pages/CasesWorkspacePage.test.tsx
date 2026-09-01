@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { describe, expect, it } from 'vitest';
 
@@ -61,5 +61,25 @@ describe('CasesWorkspacePage', () => {
     expect(detail.data.profile.profile_version).toBe(2);
     expect(detail.data.profile.supersedes_profile_id).toBe('profile-001');
     expect(detail.data.facts[0]?.confirmation_status).toBe('confirmed');
+  });
+
+  it('renders a virtual deterministic risk finding after preview analysis runs', () => {
+    render(
+      <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
+        <MemoryRouter initialEntries={['/cases?preview=1']}>
+          <CasesWorkspacePage />
+        </MemoryRouter>
+      </QueryClientProvider>,
+    );
+
+    const detailButton = screen.getAllByRole('button', { name: '查看画像' })[0];
+    if (detailButton === undefined) {
+      throw new Error('预览事项缺少查看画像入口');
+    }
+    fireEvent.click(detailButton);
+    fireEvent.click(screen.getByRole('button', { name: '运行受控分析' }));
+
+    expect(screen.getByText('规则版本：RISK-INVOICE-001-v1')).toBeInTheDocument();
+    expect(screen.getByText('风险结论由确定性规则生成，模型不能修改。')).toBeInTheDocument();
   });
 });

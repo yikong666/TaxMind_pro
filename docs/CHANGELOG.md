@@ -1,5 +1,16 @@
 # Changelog
 
+## 2026-09-01 - Stage 9 反馈与审计最小闭环
+
+- 新增仅限 `audit:read` 的机构范围审计查询 API；响应只包含动作、资源、结果、请求 ID、时间与可选脱敏摘要，绝不返回审计前后 JSON、IP 或 User-Agent 哈希。
+- 新增 `feedback_items` 及 Alembic `20260901_0010`：反馈关联事项/画像/可见资源和位置标识，状态限定为 `submitted`、`accepted`、`resolved`、`rejected`；解决反馈必须关联知识修订对象，且不能直接改写正式知识。
+- 反馈提交、受理、解决、拒绝均使用版本号并发保护并追加审计；资源访问按机构与事项范围校验。
+- 新增 `/audit` 与 `/feedback` 前端页面和虚构预览，包含空态、加载失败重试、权限失败文案与内部专业辅助提示。
+
+影响模块：Audit、Feedback、Identity Permissions、API Contracts、Web Routing。
+
+迁移与回滚：升级至 Alembic `20260901_0010` 新增 `feedback_items` 和索引；降级仅适用于确认无需保留反馈追溯的开发环境。审计日志保持追加式，不被迁移或应用回滚删除。
+
 ## 2026-08-31 - Stage 8 受控查询与确定性风险规则
 
 - 新增白名单风险 DSL 与三值执行器，支持布尔组合和基础比较；缺失事实按规则声明映射为 `need_info`、`not_hit` 或 `manual_review`，风险等级只来自规则定义。

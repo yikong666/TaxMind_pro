@@ -82,6 +82,8 @@ def build_container(
     selected = tuple(probes) if probes is not None else (NotConfiguredProbe(name="mysql"),)
     from taxmind.infrastructure.mysql.session import create_engine, session_factory
     from taxmind.infrastructure.object_storage.minio import create_minio_object_store
+    from taxmind.modules.audit.application.service import AuditService
+    from taxmind.modules.audit.infrastructure.uow import SqlAlchemyAuditUnitOfWorkFactory
     from taxmind.modules.cases.application.service import CasesService
     from taxmind.modules.cases.infrastructure.uow import SqlAlchemyCasesUnitOfWorkFactory
     from taxmind.modules.conversations.application.service import ConversationsService
@@ -92,6 +94,8 @@ def build_container(
     from taxmind.modules.documents.application.import_service import ManualImportService
     from taxmind.modules.documents.application.service import DocumentsService
     from taxmind.modules.documents.infrastructure.uow import SqlAlchemyDocumentsUnitOfWorkFactory
+    from taxmind.modules.feedback.application.service import FeedbackService
+    from taxmind.modules.feedback.infrastructure.uow import SqlAlchemyFeedbackUnitOfWorkFactory
     from taxmind.modules.identity.application.service import IdentityService
     from taxmind.modules.identity.infrastructure.security import (
         Argon2PasswordService,
@@ -102,8 +106,14 @@ def build_container(
     from taxmind.modules.knowledge.application.service import KnowledgeCandidatesService
     from taxmind.modules.knowledge.application.snapshot_service import KnowledgeSnapshotService
     from taxmind.modules.knowledge.infrastructure.uow import SqlAlchemyKnowledgeUnitOfWorkFactory
+    from taxmind.modules.procedures.application.service import ProceduresService
+    from taxmind.modules.procedures.infrastructure.uow import (
+        SqlAlchemyProceduresUnitOfWorkFactory,
+    )
     from taxmind.modules.query.application.service import QueryRunService
     from taxmind.modules.query.infrastructure.audit import SqlAlchemyQueryAuditRecorder
+    from taxmind.modules.reviews.application.service import ReviewService
+    from taxmind.modules.reviews.infrastructure.uow import SqlAlchemyReviewsUnitOfWorkFactory
     from taxmind.modules.sources.application.service import SourcesService
     from taxmind.modules.sources.infrastructure.uow import SqlAlchemySourcesUnitOfWorkFactory
 
@@ -115,6 +125,12 @@ def build_container(
         token_service=JwtTokenService(settings),
     )
     sessions = session_factory(engine)
+    procedures_service = ProceduresService(
+        uow_factory=SqlAlchemyProceduresUnitOfWorkFactory(sessions)
+    )
+    audit_service = AuditService(uow_factory=SqlAlchemyAuditUnitOfWorkFactory(sessions))
+    feedback_service = FeedbackService(uow_factory=SqlAlchemyFeedbackUnitOfWorkFactory(sessions))
+    reviews_service = ReviewService(uow_factory=SqlAlchemyReviewsUnitOfWorkFactory(sessions))
     query_runs_service = QueryRunService(
         rules=(),
         audit_recorder=SqlAlchemyQueryAuditRecorder(sessions),
@@ -158,6 +174,10 @@ def build_container(
             "identity": identity_service,
             "cases": cases_service,
             "query_runs": query_runs_service,
+            "procedures": procedures_service,
+            "reviews": reviews_service,
+            "audit": audit_service,
+            "feedback": feedback_service,
             "conversations": conversations_service,
             "documents": documents_service,
             "sources": sources_service,

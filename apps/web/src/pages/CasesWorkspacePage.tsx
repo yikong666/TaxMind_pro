@@ -39,6 +39,7 @@ import {
 } from '@/api/conversations';
 import { clearAccessToken, getAccessToken } from '@/api/session';
 import { submitQueryRun, type QueryRunResponse } from '@/api/queryRuns';
+import { RiskFindingCard } from '@/components/risk/RiskFindingCard';
 import { applyPreviewFactDecision } from '@/pages/casePreview';
 
 const { Header, Content, Footer } = Layout;
@@ -149,7 +150,15 @@ const previewQueryRun: QueryRunResponse = {
       use_milvus_semantic: true,
       graph_expansion_type: 'policy_conditions',
     },
-    rule_results: [],
+    rule_results: [
+      {
+        rule_version_id: 'RISK-INVOICE-001-v1',
+        status: 'manual_review',
+        severity: null,
+        missing_fact_keys: ['invoice_amount'],
+        basis_chunk_ids: ['virtual:invoice:article_12'],
+      },
+    ],
     follow_up_fact_keys: ['small_low_profit_status'],
     degradation_events: [],
     audit_resource_id: 'virtual-run-001',
@@ -454,6 +463,14 @@ export function CasesWorkspacePage() {
           >
             政策检索
           </Button>
+          <Button
+            ghost
+            onClick={() => {
+              void navigate(`/procedures${isPreview ? '?preview=1' : ''}`);
+            }}
+          >
+            办税事项库
+          </Button>
           <Button ghost onClick={logout}>
             {isPreview ? '返回登录' : '退出'}
           </Button>
@@ -695,19 +712,11 @@ export function CasesWorkspacePage() {
                       当前知识快照没有已发布的适用风险规则；系统不会由模型补造规则结论。
                     </Typography.Text>
                   ) : (
-                    <List
-                      size="small"
-                      dataSource={visibleQueryRun.data.rule_results}
-                      renderItem={(rule) => (
-                        <List.Item>
-                          <Space wrap>
-                            <Typography.Text>{rule.rule_version_id}</Typography.Text>
-                            <Tag>{rule.status}</Tag>
-                            {rule.severity === null ? null : <Tag color="red">{rule.severity}</Tag>}
-                          </Space>
-                        </List.Item>
-                      )}
-                    />
+                    <Space direction="vertical" size={12} className="full-width">
+                      {visibleQueryRun.data.rule_results.map((rule) => (
+                        <RiskFindingCard key={rule.rule_version_id} finding={rule} />
+                      ))}
+                    </Space>
                   )}
                 </Space>
               </Card>

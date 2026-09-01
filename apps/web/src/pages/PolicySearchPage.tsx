@@ -5,6 +5,7 @@ import {
   Card,
   Collapse,
   Descriptions,
+  Drawer,
   Empty,
   Form,
   Input,
@@ -84,6 +85,9 @@ export function PolicySearchPage() {
   const accessToken = getAccessToken();
   const isPreview = searchParameters.get('preview') === '1';
   const [submitted, setSubmitted] = useState<SearchFormValues | null>(null);
+  const [visibleEvidence, setVisibleEvidence] = useState<PolicySearchResponse['data'][number] | null>(
+    null,
+  );
   const search = useQuery({
     queryKey: ['policies', 'search', submitted],
     queryFn: () => {
@@ -122,9 +126,17 @@ export function PolicySearchPage() {
           </Typography.Title>
           <Typography.Text className="brand-subtitle">政策检索与证据详情</Typography.Text>
         </div>
-        <Button ghost onClick={logout}>
-          {isPreview ? '返回登录' : '退出'}
-        </Button>
+        <Space>
+          <Button
+            ghost
+            onClick={() => void navigate(`/procedures${isPreview ? '?preview=1' : ''}`)}
+          >
+            办税事项库
+          </Button>
+          <Button ghost onClick={logout}>
+            {isPreview ? '返回登录' : '退出'}
+          </Button>
+        </Space>
       </Header>
       <Content className="app-content">
         <Space direction="vertical" size={24} className="full-width">
@@ -222,6 +234,13 @@ export function PolicySearchPage() {
                             {evidence.chunk.effective_end ?? '持续有效'}
                           </Descriptions.Item>
                         </Descriptions>
+                        <Button
+                          onClick={() => {
+                            setVisibleEvidence(evidence);
+                          }}
+                        >
+                          查看证据详情
+                        </Button>
                         <Collapse
                           size="small"
                           items={[
@@ -252,6 +271,65 @@ export function PolicySearchPage() {
         </Space>
       </Content>
       <Footer className="app-footer">TaxMind Pro · 内部专业辅助</Footer>
+      <Drawer
+        title="条款证据详情"
+        width={640}
+        open={visibleEvidence !== null}
+        onClose={() => {
+          setVisibleEvidence(null);
+        }}
+        destroyOnHidden
+      >
+        {visibleEvidence !== null ? (
+          <Space direction="vertical" size={16} className="full-width">
+            {visibleEvidence.region_match === 'national_only' ? (
+              <Alert
+                type="warning"
+                showIcon
+                message="全国口径回退"
+                description="当前未匹配到本地地区口径；该条款不能替代广东省或深圳市的办理依据。"
+              />
+            ) : (
+              <Alert type="success" showIcon message="本地地区匹配" />
+            )}
+            <Descriptions size="small" column={1}>
+              <Descriptions.Item label="文件标题">
+                {visibleEvidence.document.title}
+              </Descriptions.Item>
+              <Descriptions.Item label="文号">
+                {visibleEvidence.document.doc_no ?? '无文号'}
+              </Descriptions.Item>
+              <Descriptions.Item label="发文机关">
+                {visibleEvidence.document.issuing_authority}
+              </Descriptions.Item>
+              <Descriptions.Item label="条款">
+                {visibleEvidence.chunk.clause_label ?? visibleEvidence.chunk.heading_path}
+              </Descriptions.Item>
+              <Descriptions.Item label="有效期">
+                {visibleEvidence.chunk.effective_start ?? '未标注'} 至{' '}
+                {visibleEvidence.chunk.effective_end ?? '持续有效'}
+              </Descriptions.Item>
+              <Descriptions.Item label="审核状态">
+                {visibleEvidence.chunk.review_status === 'published' ? '已发布' : '未发布'}
+              </Descriptions.Item>
+              <Descriptions.Item label="版本">
+                v{visibleEvidence.version.version_no}
+              </Descriptions.Item>
+              <Descriptions.Item label="来源条款标识">
+                {visibleEvidence.chunk.source_chunk_id}
+              </Descriptions.Item>
+            </Descriptions>
+            <Card size="small" title="条款原文">
+              <Typography.Paragraph className="evidence-content">
+                {visibleEvidence.chunk.content_text}
+              </Typography.Paragraph>
+            </Card>
+            <Typography.Link href={visibleEvidence.document.canonical_url} target="_blank">
+              官方公开来源
+            </Typography.Link>
+          </Space>
+        ) : null}
+      </Drawer>
     </Layout>
   );
 }

@@ -17,12 +17,28 @@ class RoleCode(StrEnum):
 
 _ROLE_PERMISSIONS: dict[RoleCode, frozenset[str]] = {
     RoleCode.ORG_ADMIN: frozenset(
-        {"members:read", "members:write", "org:manage", "cases:read", "cases:write"}
+        {
+            "members:read",
+            "members:write",
+            "org:manage",
+            "cases:read",
+            "cases:write",
+            "feedback:write",
+            "feedback:manage",
+        }
     ),
-    RoleCode.CONSULTANT: frozenset({"cases:read", "cases:write"}),
-    RoleCode.REVIEWER: frozenset({"cases:read", "cases:write", "cases:review"}),
-    RoleCode.KNOWLEDGE_ADMIN: frozenset({"knowledge:read", "knowledge:write", "knowledge:review"}),
-    RoleCode.AUDITOR: frozenset({"audit:read", "cases:read"}),
+    RoleCode.CONSULTANT: frozenset({"cases:read", "cases:write", "feedback:write"}),
+    RoleCode.REVIEWER: frozenset({"cases:read", "cases:write", "cases:review", "feedback:write"}),
+    RoleCode.KNOWLEDGE_ADMIN: frozenset(
+        {
+            "knowledge:read",
+            "knowledge:write",
+            "knowledge:review",
+            "feedback:write",
+            "feedback:manage",
+        }
+    ),
+    RoleCode.AUDITOR: frozenset({"audit:read", "cases:read", "feedback:write"}),
 }
 
 

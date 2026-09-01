@@ -34,6 +34,8 @@ async def test_default_container_wires_identity_service_without_connecting_mysql
     assert "documents" in wire_services(container)
     assert "sources" in wire_services(container)
     assert "manual_import" in wire_services(container)
+    assert "audit" in wire_services(container)
+    assert "feedback" in wire_services(container)
     await container.shutdown()
 
 
