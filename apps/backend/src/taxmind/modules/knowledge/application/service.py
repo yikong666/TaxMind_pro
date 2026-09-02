@@ -111,6 +111,15 @@ class KnowledgeCandidatesService:
         async with self._uow_factory() as uow:
             return await _repository(uow).list_pending_candidates(limit=limit)
 
+    async def list_approved_candidates(
+        self, *, limit: int, principal: Principal
+    ) -> list[KnowledgeCandidateRecord]:
+        _require_knowledge_read(principal)
+        if not 1 <= limit <= 100:
+            raise DomainError(code="VALIDATION_FAILED", message="候选队列数量必须在 1 到 100 之间")
+        async with self._uow_factory() as uow:
+            return await _repository(uow).list_approved_candidates(limit=limit)
+
 
 def _repository(uow: SqlAlchemyKnowledgeUnitOfWork) -> SqlAlchemyKnowledgeRepository:
     if uow.repository is None:

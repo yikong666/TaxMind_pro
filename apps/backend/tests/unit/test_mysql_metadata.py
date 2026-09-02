@@ -1,13 +1,13 @@
+import taxmind.modules.audit.infrastructure.models as audit_models  # noqa: F401
+import taxmind.modules.cases.infrastructure.models as cases_models  # noqa: F401
+import taxmind.modules.conversations.infrastructure.models as conversation_models  # noqa: F401
+import taxmind.modules.feedback.infrastructure.models as feedback_models  # noqa: F401
+import taxmind.modules.identity.infrastructure.models as identity_models  # noqa: F401
+import taxmind.modules.knowledge.infrastructure.models as knowledge_models  # noqa: F401
+import taxmind.modules.sources.infrastructure.models as source_models  # noqa: F401
 from taxmind.bootstrap.settings import Settings
 from taxmind.infrastructure.mysql.base import Base
 from taxmind.infrastructure.mysql.session import database_url
-from taxmind.modules.audit.infrastructure import models as audit_models  # noqa: F401
-from taxmind.modules.cases.infrastructure import models as cases_models  # noqa: F401
-from taxmind.modules.conversations.infrastructure import models as conversation_models  # noqa: F401
-from taxmind.modules.feedback.infrastructure import models as feedback_models  # noqa: F401
-from taxmind.modules.identity.infrastructure import models as identity_models  # noqa: F401
-from taxmind.modules.knowledge.infrastructure import models as knowledge_models  # noqa: F401
-from taxmind.modules.sources.infrastructure import models as source_models  # noqa: F401
 
 
 def test_database_url_hides_password_when_rendered_for_diagnostics() -> None:

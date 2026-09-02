@@ -2138,6 +2138,26 @@
         "title": "KnowledgePublishBatchData",
         "type": "object"
       },
+      "KnowledgePublishBatchListResponse": {
+        "properties": {
+          "data": {
+            "items": {
+              "$ref": "#/components/schemas/KnowledgePublishBatchData"
+            },
+            "title": "Data",
+            "type": "array"
+          },
+          "meta": {
+            "$ref": "#/components/schemas/ResponseMeta"
+          }
+        },
+        "required": [
+          "data",
+          "meta"
+        ],
+        "title": "KnowledgePublishBatchListResponse",
+        "type": "object"
+      },
       "KnowledgePublishBatchResponse": {
         "properties": {
           "data": {
@@ -5111,6 +5131,56 @@
         ]
       }
     },
+    "/api/v1/knowledge/candidates/approved": {
+      "get": {
+        "operationId": "list_approved_knowledge_candidates_api_v1_knowledge_candidates_approved_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "maximum": 100,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CandidateQueueResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "List Approved Knowledge Candidates",
+        "tags": [
+          "knowledge-candidates"
+        ]
+      }
+    },
     "/api/v1/knowledge/candidates/{candidate_id}/review": {
       "post": {
         "operationId": "review_knowledge_candidate_api_v1_knowledge_candidates__candidate_id__review_post",
@@ -5517,6 +5587,54 @@
       }
     },
     "/api/v1/knowledge/publish-batches": {
+      "get": {
+        "operationId": "list_knowledge_publish_batches_api_v1_knowledge_publish_batches_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "maximum": 100,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/KnowledgePublishBatchListResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "List Knowledge Publish Batches",
+        "tags": [
+          "knowledge-candidates"
+        ]
+      },
       "post": {
         "operationId": "create_knowledge_publish_batch_api_v1_knowledge_publish_batches_post",
         "requestBody": {

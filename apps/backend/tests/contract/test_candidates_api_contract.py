@@ -26,6 +26,10 @@ def test_openapi_exposes_review_gated_candidate_batch_and_queue(tmp_path: Path) 
     assert queue_path["responses"]["200"]["description"]
     assert {parameter["name"] for parameter in queue_path["parameters"]} == {"limit"}
 
+    approved_queue_path = schema["paths"]["/api/v1/knowledge/candidates/approved"]["get"]
+    assert approved_queue_path["responses"]["200"]["description"]
+    assert {parameter["name"] for parameter in approved_queue_path["parameters"]} == {"limit"}
+
     review_path = schema["paths"]["/api/v1/knowledge/candidates/{candidate_id}/review"]["post"]
     review_schema = review_path["requestBody"]["content"]["application/json"]["schema"]
     review_name = review_schema["$ref"].rsplit("/", maxsplit=1)[-1]
@@ -35,6 +39,9 @@ def test_openapi_exposes_review_gated_candidate_batch_and_queue(tmp_path: Path) 
 
     publish_path = schema["paths"]["/api/v1/knowledge/publish-batches"]["post"]
     assert publish_path["responses"]["201"]["description"]
+    publish_queue_path = schema["paths"]["/api/v1/knowledge/publish-batches"]["get"]
+    assert publish_queue_path["responses"]["200"]["description"]
+    assert {parameter["name"] for parameter in publish_queue_path["parameters"]} == {"limit"}
     validate_path = schema["paths"]["/api/v1/knowledge/publish-batches/{batch_id}/validate"]["post"]
     assert validate_path["responses"]["200"]["description"]
 

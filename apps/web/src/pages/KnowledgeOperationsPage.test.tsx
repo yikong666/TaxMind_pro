@@ -17,7 +17,10 @@ describe('KnowledgeOperationsPage', () => {
 
     expect(screen.getByRole('heading', { name: '知识运营' })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: '待审核候选' })).toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: '当前发布批次' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: '来源与发布批次' })).toBeInTheDocument();
     expect(screen.getByText('第一条：适用范围')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: '通过候选' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: '退回候选' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: '登记来源' })).toBeDisabled();
   });
 });

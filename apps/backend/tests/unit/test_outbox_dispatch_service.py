@@ -207,7 +207,12 @@ async def test_dispatch_rejects_invalid_batch_limit() -> None:
 
 def test_worker_dispatch_service_uses_bounded_settings() -> None:
     service = build_outbox_dispatch_service(
-        Settings(app_env="test", outbox_dispatch_batch_size=5, outbox_max_attempts=4),
+        Settings(
+            app_env="test",
+            embedding_provider="external",
+            outbox_dispatch_batch_size=5,
+            outbox_max_attempts=4,
+        ),
         sessions=cast(async_sessionmaker[AsyncSession], object()),
     )
 

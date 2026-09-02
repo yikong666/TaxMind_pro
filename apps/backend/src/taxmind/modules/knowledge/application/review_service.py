@@ -132,6 +132,15 @@ class KnowledgeReviewService:
             await uow.commit()
             return batch
 
+    async def list_publish_batches(
+        self, *, limit: int, principal: Principal
+    ) -> list[KnowledgePublishBatchRecord]:
+        _require_knowledge_review(principal)
+        if not 1 <= limit <= 100:
+            raise DomainError(code="VALIDATION_FAILED", message="发布批次数量必须在 1 到 100 之间")
+        async with self._uow_factory() as uow:
+            return await _repository(uow).list_publish_batches(limit=limit)
+
     async def validate_publish_batch(
         self,
         batch_id: str,

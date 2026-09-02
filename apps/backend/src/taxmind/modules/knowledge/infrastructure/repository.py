@@ -314,6 +314,15 @@ class SqlAlchemyKnowledgeRepository:
         )
         return [_candidate_record(model) for model in models]
 
+    async def list_approved_candidates(self, *, limit: int) -> list[KnowledgeCandidateRecord]:
+        models = await self._session.scalars(
+            select(KnowledgeCandidateModel)
+            .where(KnowledgeCandidateModel.review_status == "approved")
+            .order_by(KnowledgeCandidateModel.reviewed_at, KnowledgeCandidateModel.id)
+            .limit(limit)
+        )
+        return [_candidate_record(model) for model in models]
+
     async def get_candidate(
         self, candidate_id: str, *, lock: bool = False
     ) -> KnowledgeCandidateRecord | None:
@@ -392,6 +401,14 @@ class SqlAlchemyKnowledgeRepository:
             statement = statement.with_for_update()
         model = await self._session.scalar(statement)
         return _publish_batch_record(model) if model else None
+
+    async def list_publish_batches(self, *, limit: int) -> list[KnowledgePublishBatchRecord]:
+        models = await self._session.scalars(
+            select(KnowledgePublishBatchModel)
+            .order_by(KnowledgePublishBatchModel.created_at.desc(), KnowledgePublishBatchModel.id)
+            .limit(limit)
+        )
+        return [_publish_batch_record(model) for model in models]
 
     async def list_publish_candidates(self, batch_id: str) -> list[KnowledgeCandidateRecord]:
         models = await self._session.scalars(

@@ -116,6 +116,11 @@ class KnowledgePublishBatchResponse(BaseModel):
     meta: ResponseMeta
 
 
+class KnowledgePublishBatchListResponse(BaseModel):
+    data: list[KnowledgePublishBatchData]
+    meta: ResponseMeta
+
+
 class KnowledgeSnapshotData(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
@@ -252,6 +257,18 @@ async def create_rule_based_candidate_batch(
     return CreatedCandidateBatchResponse(data=_created_data(result), meta=_meta(request))
 
 
+@router.get("/knowledge/candidates/approved", response_model=CandidateQueueResponse)
+async def list_approved_knowledge_candidates(
+    request: Request,
+    principal: Annotated[Principal, Depends(current_principal)],
+    limit: Annotated[int, Query(ge=1, le=100)] = 50,
+) -> CandidateQueueResponse:
+    candidates = await _service(request).list_approved_candidates(limit=limit, principal=principal)
+    return CandidateQueueResponse(
+        data=[_candidate_data(candidate) for candidate in candidates], meta=_meta(request)
+    )
+
+
 @router.get("/knowledge/candidates", response_model=CandidateQueueResponse)
 async def list_pending_knowledge_candidates(
     request: Request,
@@ -300,6 +317,18 @@ async def create_knowledge_publish_batch(
         principal=principal,
     )
     return KnowledgePublishBatchResponse(data=_publish_batch_data(batch), meta=_meta(request))
+
+
+@router.get("/knowledge/publish-batches", response_model=KnowledgePublishBatchListResponse)
+async def list_knowledge_publish_batches(
+    request: Request,
+    principal: Annotated[Principal, Depends(current_principal)],
+    limit: Annotated[int, Query(ge=1, le=100)] = 50,
+) -> KnowledgePublishBatchListResponse:
+    batches = await _review_service(request).list_publish_batches(limit=limit, principal=principal)
+    return KnowledgePublishBatchListResponse(
+        data=[_publish_batch_data(batch) for batch in batches], meta=_meta(request)
+    )
 
 
 @router.post(
