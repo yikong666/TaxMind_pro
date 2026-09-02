@@ -15,7 +15,7 @@ describe('PolicySearchPage', () => {
       </QueryClientProvider>,
     );
 
-    fireEvent.click(screen.getByRole('button', { name: '查看证据详情' }));
+    fireEvent.click(screen.getByRole('button', { name: '查看' }));
 
     const drawer = screen.getByRole('dialog', { name: '条款证据详情' });
     expect(drawer).toBeInTheDocument();
@@ -28,5 +28,19 @@ describe('PolicySearchPage', () => {
       'href',
       'https://example.invalid/virtual-policy',
     );
+  });
+
+  it('uses the compact evidence-search layout from the approved design', () => {
+    render(
+      <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
+        <MemoryRouter initialEntries={['/policies?preview=1']}>
+          <PolicySearchPage />
+        </MemoryRouter>
+      </QueryClientProvider>,
+    );
+
+    expect(screen.getByRole('heading', { name: '查找政策证据' })).toBeInTheDocument();
+    expect(screen.getByText('搜索、筛选和证据详情保持在一个轻量页面中')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: '查看' })).toBeInTheDocument();
   });
 });

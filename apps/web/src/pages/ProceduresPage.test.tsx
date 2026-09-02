@@ -24,4 +24,18 @@ describe('ProceduresPage', () => {
       'https://example.invalid/procedure',
     );
   });
+
+  it('uses the compact procedure list layout from the approved design', () => {
+    render(
+      <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
+        <MemoryRouter initialEntries={['/procedures?preview=1']}>
+          <ProceduresPage />
+        </MemoryRouter>
+      </QueryClientProvider>,
+    );
+
+    expect(screen.getByRole('heading', { name: '办税事项' })).toBeInTheDocument();
+    expect(screen.getByText('把材料、渠道和官方入口聚合在单个清爽列表')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: '详情' })).toBeInTheDocument();
+  });
 });

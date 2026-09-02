@@ -16,7 +16,7 @@ export function LoginPage() {
     mutationFn: login,
     onSuccess: (response) => {
       setAccessToken(response.data.access_token);
-      void navigate('/policies');
+      void navigate('/cases');
     },
   });
 
@@ -68,11 +68,11 @@ export function LoginPage() {
                 />
               ) : null}
               <Button type="primary" htmlType="submit" loading={session.isPending} block>
-                登录并进入政策检索
+                登录并进入我的工作台
               </Button>
             </Form>
             <Divider plain>或</Divider>
-            <Button block onClick={() => void navigate('/policies?preview=1')}>
+            <Button block onClick={() => void navigate('/cases?preview=1')}>
               进入虚构数据预览
             </Button>
           </Card>

@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="720" height="180" viewBox="0 0 720 180" role="img" aria-label="TaxMind Pro logo wordmark">
+  <rect x="0" y="20" width="140" height="140" rx="34" fill="#5966F2"/>
+  <!-- Knowledge-graph relation orbit -->
+  <circle cx="70" cy="90" r="43" fill="none" stroke="#FFFFFF" stroke-width="7" stroke-dasharray="78 21" transform="rotate(-35 70 90)"/>
+  <circle cx="42" cy="58" r="9" fill="#FFFFFF"/>
+  <circle cx="106" cy="69" r="9" fill="#FFFFFF"/>
+  <circle cx="96" cy="125" r="9" fill="#FFFFFF"/>
+  <!-- Tax domain core -->
+  <circle cx="70" cy="92" r="28" fill="#FFFFFF"/>
+  <text x="54" y="106" fill="#5966F2" font-family="PingFang SC, Microsoft YaHei, Arial, sans-serif" font-size="33" font-weight="700">税</text>
+  <text x="178" y="90" fill="#172245" font-family="Inter, PingFang SC, Microsoft YaHei, Arial, sans-serif" font-size="56" font-weight="700" letter-spacing="-1">TaxMind</text>
+  <text x="181" y="126" fill="#78849A" font-family="Inter, PingFang SC, Microsoft YaHei, Arial, sans-serif" font-size="22" letter-spacing="1">专业财税工作台</text>
+</svg>

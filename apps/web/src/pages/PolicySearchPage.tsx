@@ -2,33 +2,27 @@ import { useQuery } from '@tanstack/react-query';
 import {
   Alert,
   Button,
-  Card,
-  Collapse,
   Descriptions,
   Drawer,
   Empty,
   Form,
   Input,
-  Layout,
-  List,
   Space,
   Spin,
-  Tag,
   Typography,
 } from 'antd';
+import { Eye, ExternalLink, Search } from 'lucide-react';
 import { useState } from 'react';
 import { Navigate, useNavigate, useSearchParams } from 'react-router-dom';
 
 import { searchPolicies, type PolicySearchResponse } from '@/api/policies';
-import { clearAccessToken, getAccessToken } from '@/api/session';
+import { getAccessToken } from '@/api/session';
 
 interface SearchFormValues {
   query: string;
   regionCode: string;
   businessDate: string;
 }
-
-const { Header, Content, Footer } = Layout;
 
 const previewData: PolicySearchResponse = {
   data: [
@@ -112,45 +106,35 @@ export function PolicySearchPage() {
     });
   }
 
-  function logout() {
-    clearAccessToken();
-    void navigate('/');
-  }
-
   return (
-    <Layout className="app-shell">
-      <Header className="app-header policy-header">
+    <main className="directory-page">
+      <div className="directory-head">
         <div>
-          <Typography.Title level={3} className="brand-title">
-            TaxMind Pro
-          </Typography.Title>
-          <Typography.Text className="brand-subtitle">政策检索与证据详情</Typography.Text>
+          <h1>查找政策证据</h1>
+          <p>搜索、筛选和证据详情保持在一个轻量页面中</p>
         </div>
-        <Space>
-          <Button
-            ghost
-            onClick={() => void navigate(`/procedures${isPreview ? '?preview=1' : ''}`)}
-          >
-            办税事项库
-          </Button>
-          <Button ghost onClick={logout}>
-            {isPreview ? '返回登录' : '退出'}
-          </Button>
-        </Space>
-      </Header>
-      <Content className="app-content">
-        <Space direction="vertical" size={24} className="full-width">
-          <Alert
-            type={isPreview ? 'info' : 'warning'}
-            showIcon
-            message={isPreview ? '预览模式：仅展示虚构示例' : '内部专业辅助：检索结果不是正式税务意见'}
-            description={
-              isPreview
-                ? '该页面没有访问后端、模型或真实政策资料；登录后才能进行受权限保护的正式检索。'
-                : '系统仅展示已发布、有效的证据条款。请结合业务事实、地区口径和人工审核作出最终判断。'
-            }
-          />
-          <Card title="检索条件">
+        <Button
+          className="directory-return"
+          onClick={() => {
+            void navigate(`/cases${isPreview ? '?preview=1' : ''}`);
+          }}
+        >
+          返回工作台
+        </Button>
+      </div>
+      <Alert
+        className="directory-notice"
+        type={isPreview ? 'info' : 'warning'}
+        showIcon
+        message={isPreview ? '预览模式：仅展示虚构示例' : '内部专业辅助：检索结果不是正式税务意见'}
+        description={
+          isPreview
+            ? '该页面没有访问后端、模型或真实政策资料；登录后才能进行受权限保护的正式检索。'
+            : '系统仅展示已发布、有效的证据条款。请结合业务事实、地区口径和人工审核作出最终判断。'
+        }
+      />
+      <section className="directory-panel">
+        <div className="directory-filter">
             <Form<SearchFormValues>
               layout="vertical"
               initialValues={{ regionCode: '440300', businessDate: '2026-08-31' }}
@@ -175,17 +159,14 @@ export function PolicySearchPage() {
                   <Input type="date" />
                 </Form.Item>
                 <Form.Item className="policy-search-action">
-                  <Button type="primary" htmlType="submit" loading={!isPreview && search.isFetching}>
-                    {isPreview ? '查看虚构预览结果' : '检索已发布政策'}
+                  <Button icon={<Search aria-hidden="true" size={15} />} type="primary" htmlType="submit" loading={!isPreview && search.isFetching}>
+                    {isPreview ? '搜索预览' : '搜索'}
                   </Button>
                 </Form.Item>
               </div>
             </Form>
-          </Card>
-          <Button onClick={() => void navigate(`/cases${isPreview ? '?preview=1' : ''}`)}>
-            前往事项工作台
-          </Button>
-          <section aria-live="polite">
+        </div>
+        <section aria-live="polite" className="directory-results">
             {!isPreview && search.isFetching ? <Spin tip="正在按地区和业务日期筛选已发布证据…" /> : null}
             {!isPreview && search.isError ? (
               <Alert
@@ -199,78 +180,32 @@ export function PolicySearchPage() {
             {evidenceData !== undefined && evidenceData.data.length === 0 ? (
               <Empty description="当前条件下没有可用的已发布证据" />
             ) : null}
-            {evidenceData !== undefined && evidenceData.data.length > 0 ? (
-              <List
-                className="policy-results"
-                dataSource={evidenceData.data}
-                renderItem={(evidence) => (
-                  <List.Item key={evidence.chunk.id}>
-                    <Card className="evidence-card" title={evidence.document.title}>
-                      <Space direction="vertical" size={12} className="full-width">
-                        <Space wrap>
-                          <Tag color="green">已发布</Tag>
-                          <Tag>{evidence.document.doc_no ?? '无文号'}</Tag>
-                          <Tag>{evidence.chunk.clause_label ?? evidence.chunk.heading_path}</Tag>
-                          <Tag color="cyan">
-                            {evidence.retrieval_reason === 'mysql_exact'
-                              ? '精确检索'
-                              : '受控检索'}
-                          </Tag>
-                          {evidence.region_match === 'national_only' ? (
-                            <Tag color="gold">全国口径回退</Tag>
-                          ) : (
-                            <Tag color="blue">本地地区匹配</Tag>
-                          )}
-                        </Space>
-                        <Typography.Paragraph className="evidence-content">
-                          {evidence.chunk.content_text}
-                        </Typography.Paragraph>
-                        <Descriptions size="small" column={{ xs: 1, sm: 2 }}>
-                          <Descriptions.Item label="发文机关">
-                            {evidence.document.issuing_authority}
-                          </Descriptions.Item>
-                          <Descriptions.Item label="有效期">
-                            {evidence.chunk.effective_start ?? '未标注'} 至{' '}
-                            {evidence.chunk.effective_end ?? '持续有效'}
-                          </Descriptions.Item>
-                        </Descriptions>
-                        <Button
-                          onClick={() => {
-                            setVisibleEvidence(evidence);
-                          }}
-                        >
-                          查看证据详情
-                        </Button>
-                        <Collapse
-                          size="small"
-                          items={[
-                            {
-                              key: 'source',
-                              label: '查看来源与版本信息',
-                              children: (
-                                <Space direction="vertical" size={4}>
-                                  <Typography.Text>版本：v{evidence.version.version_no}</Typography.Text>
-                                  <Typography.Link href={evidence.document.canonical_url} target="_blank">
-                                    官方公开来源
-                                  </Typography.Link>
-                                  <Typography.Text type="secondary">
-                                    来源条款标识：{evidence.chunk.source_chunk_id}
-                                  </Typography.Text>
-                                </Space>
-                              ),
-                            },
-                          ]}
-                        />
-                      </Space>
-                    </Card>
-                  </List.Item>
-                )}
-              />
-            ) : null}
-          </section>
-        </Space>
-      </Content>
-      <Footer className="app-footer">TaxMind Pro · 内部专业辅助</Footer>
+          {evidenceData?.data.map((evidence) => (
+            <article className="directory-list-item" key={evidence.chunk.id}>
+              <div>
+                <strong>{evidence.document.title}</strong>
+                <p>{evidence.document.doc_no ?? '无文号'} · {evidence.chunk.clause_label ?? evidence.chunk.heading_path} · {evidence.document.issuing_authority}</p>
+                <span className="directory-excerpt">{evidence.chunk.content_text}</span>
+              </div>
+              <div className="directory-list-actions">
+                <span className={`directory-badge ${evidence.region_match === 'national_only' ? 'is-amber' : 'is-blue'}`}>
+                  {evidence.region_match === 'national_only' ? '全国回退' : '本地匹配'}
+                </span>
+                <Button
+                  aria-label="查看"
+                  icon={<Eye aria-hidden="true" size={15} />}
+                  size="small"
+                  onClick={() => {
+                    setVisibleEvidence(evidence);
+                  }}
+                >
+                  查看
+                </Button>
+              </div>
+            </article>
+          ))}
+        </section>
+      </section>
       <Drawer
         title="条款证据详情"
         width={640}
@@ -319,17 +254,19 @@ export function PolicySearchPage() {
                 {visibleEvidence.chunk.source_chunk_id}
               </Descriptions.Item>
             </Descriptions>
-            <Card size="small" title="条款原文">
+            <section className="evidence-drawer-content">
+              <strong>条款原文</strong>
               <Typography.Paragraph className="evidence-content">
                 {visibleEvidence.chunk.content_text}
               </Typography.Paragraph>
-            </Card>
+            </section>
             <Typography.Link href={visibleEvidence.document.canonical_url} target="_blank">
+              <ExternalLink aria-hidden="true" size={14} />
               官方公开来源
             </Typography.Link>
           </Space>
         ) : null}
       </Drawer>
-    </Layout>
+    </main>
   );
 }

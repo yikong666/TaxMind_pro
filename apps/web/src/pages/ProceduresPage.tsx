@@ -2,24 +2,18 @@ import { useQuery } from '@tanstack/react-query';
 import {
   Alert,
   Button,
-  Card,
   Empty,
   Form,
   Input,
-  Layout,
-  List,
-  Space,
   Spin,
-  Tag,
   Typography,
 } from 'antd';
+import { ExternalLink, Search } from 'lucide-react';
 import { useState } from 'react';
 import { Navigate, useNavigate, useSearchParams } from 'react-router-dom';
 
 import { searchProcedures, type ProcedureSearchResponse } from '@/api/procedures';
 import { getAccessToken } from '@/api/session';
-
-const { Header, Content, Footer } = Layout;
 
 interface ProcedureFormValues {
   query: string;
@@ -79,35 +73,29 @@ export function ProceduresPage() {
   }
 
   return (
-    <Layout className="app-shell">
-      <Header className="app-header policy-header">
+    <main className="directory-page">
+      <div className="directory-head">
         <div>
-          <Typography.Title level={3} className="brand-title">
-            TaxMind Pro
-          </Typography.Title>
-          <Typography.Text className="brand-subtitle">办税事项库</Typography.Text>
+          <h1>办税事项</h1>
+          <p>把材料、渠道和官方入口聚合在单个清爽列表</p>
         </div>
-        <Button onClick={() => void navigate(`/cases${isPreview ? '?preview=1' : ''}`)}>
-          前往事项工作台
+        <Button className="directory-return" onClick={() => void navigate(`/cases${isPreview ? '?preview=1' : ''}`)}>
+          返回工作台
         </Button>
-      </Header>
-      <Content className="app-content">
-        <Space direction="vertical" size={24} className="full-width">
-          <Alert
-            type={isPreview ? 'info' : 'warning'}
-            showIcon
-            message={
-              isPreview
-                ? '预览模式：仅展示虚构办税事项'
-                : '内部专业辅助：请核验地区、日期与官方来源'
-            }
-            description={
-              isPreview
-                ? '该页面不访问真实办税资料；正式结果仅返回已审核发布的事项版本。'
-                : '事项指引不替代正式税务意见或主管机关的最终办理要求。'
-            }
-          />
-          <Card title="办税事项查询">
+      </div>
+      <Alert
+        className="directory-notice"
+        type={isPreview ? 'info' : 'warning'}
+        showIcon
+        message={isPreview ? '预览模式：仅展示虚构办税事项' : '内部专业辅助：请核验地区、日期与官方来源'}
+        description={
+          isPreview
+            ? '该页面不访问真实办税资料；正式结果仅返回已审核发布的事项版本。'
+            : '事项指引不替代正式税务意见或主管机关的最终办理要求。'
+        }
+      />
+      <section className="directory-panel">
+        <div className="directory-filter">
             <Form<ProcedureFormValues>
               layout="vertical"
               initialValues={{ region: '440300', date: '2026-09-01' }}
@@ -132,14 +120,14 @@ export function ProceduresPage() {
                   <Input type="date" />
                 </Form.Item>
                 <Form.Item className="policy-search-action">
-                  <Button type="primary" htmlType="submit" loading={!isPreview && result.isFetching}>
-                    {isPreview ? '查看虚构预览结果' : '查询已发布事项'}
+                  <Button icon={<Search aria-hidden="true" size={15} />} type="primary" htmlType="submit" loading={!isPreview && result.isFetching}>
+                    {isPreview ? '查询预览' : '查询'}
                   </Button>
                 </Form.Item>
               </div>
             </Form>
-          </Card>
-          <section aria-live="polite">
+        </div>
+        <section aria-live="polite" className="directory-results">
             {!isPreview && result.isFetching ? <Spin tip="正在筛选已发布事项…" /> : null}
             {!isPreview && result.isError ? (
               <Alert
@@ -153,36 +141,28 @@ export function ProceduresPage() {
             {displayedData !== undefined && displayedData.data.length === 0 ? (
               <Empty description="当前条件下没有已发布办税事项" />
             ) : null}
-            <List
-              dataSource={displayedData?.data ?? []}
-              renderItem={(item) => (
-                <List.Item key={item.procedure_version_id}>
-                  <Card title={item.title} className="full-width">
-                    <Space direction="vertical" size={12}>
-                      <Space wrap>
-                        <Tag>{item.procedure_code}</Tag>
-                        <Tag color={item.region_match === 'local' ? 'blue' : 'gold'}>
-                          {item.region_match === 'local' ? '本地地区匹配' : '全国口径回退'}
-                        </Tag>
-                      </Space>
-                      <Typography.Text>
-                        材料：{item.materials.length > 0 ? item.materials.join('、') : '待核实'}
-                      </Typography.Text>
-                      <Typography.Text>
-                        渠道：{item.channels.length > 0 ? item.channels.join('、') : '待核实'}
-                      </Typography.Text>
-                      <Typography.Link href={item.official_url} target="_blank">
-                        官方办理入口
-                      </Typography.Link>
-                    </Space>
-                  </Card>
-                </List.Item>
-              )}
-            />
-          </section>
-        </Space>
-      </Content>
-      <Footer className="app-footer">TaxMind Pro · 内部专业辅助</Footer>
-    </Layout>
+          {displayedData?.data.map((item) => (
+            <article className="directory-list-item" key={item.procedure_version_id}>
+              <div>
+                <strong>{item.title}</strong>
+                <p>{item.procedure_code} · {item.channels.length > 0 ? item.channels.join('、') : '渠道待核实'} · {item.materials.length > 0 ? item.materials.join('、') : '材料待核实'}</p>
+                <span className="directory-excerpt">{item.source_chunk_ids.length} 条可追溯依据 · 有效期 {item.effective_start} 至 {item.effective_end ?? '持续有效'}</span>
+              </div>
+              <div className="directory-list-actions">
+                <span className={`directory-badge ${item.region_match === 'local' ? 'is-blue' : 'is-amber'}`}>
+                  {item.region_match === 'local' ? '本地匹配' : '全国回退'}
+                </span>
+                <span className="sr-only">{item.region_match === 'local' ? '本地地区匹配' : '全国口径回退'}</span>
+                <Button aria-label="详情" size="small">详情</Button>
+                <Typography.Link href={item.official_url} target="_blank" aria-label="官方办理入口">
+                  <ExternalLink aria-hidden="true" size={15} />
+                </Typography.Link>
+              </div>
+              <span className="sr-only">材料：{item.materials.length > 0 ? item.materials.join('、') : '待核实'}</span>
+            </article>
+          ))}
+        </section>
+      </section>
+    </main>
   );
 }

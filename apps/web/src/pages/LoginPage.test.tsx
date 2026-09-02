@@ -18,7 +18,7 @@ describe('LoginPage', () => {
     expect(screen.getByText('内部专业辅助')).toBeInTheDocument();
     expect(screen.getByLabelText('邮箱')).toBeInTheDocument();
     expect(screen.getByLabelText('密码')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: '登录并进入政策检索' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: '登录并进入我的工作台' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: '进入虚构数据预览' })).toBeInTheDocument();
   });
 });

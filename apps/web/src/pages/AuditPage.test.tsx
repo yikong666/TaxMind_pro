@@ -17,4 +17,10 @@ describe('AuditPage', () => {
     expect(screen.getByText('review.task.action_recorded')).toBeInTheDocument();
     expect(screen.queryByText('before_json')).not.toBeInTheDocument();
   });
+
+  it('uses the compact audit table from the approved design', () => {
+    render(<QueryClientProvider client={new QueryClient()}><MemoryRouter initialEntries={['/audit?preview=1']}><AuditPage /></MemoryRouter></QueryClientProvider>);
+    expect(screen.getByRole('heading', { name: '操作审计' })).toBeInTheDocument();
+    expect(screen.getByText('按需筛选，不展示敏感审计快照正文')).toBeInTheDocument();
+  });
 });

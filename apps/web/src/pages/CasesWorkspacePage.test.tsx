@@ -7,6 +7,26 @@ import { CasesWorkspacePage } from '@/pages/CasesWorkspacePage';
 import { applyPreviewFactDecision } from '@/pages/casePreview';
 
 describe('CasesWorkspacePage', () => {
+  it('renders the fixed-width conversation history and can collapse it from the project header', () => {
+    render(
+      <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
+        <MemoryRouter initialEntries={['/cases?preview=1']}>
+          <CasesWorkspacePage />
+        </MemoryRouter>
+      </QueryClientProvider>,
+    );
+
+    expect(screen.getByRole('complementary', { name: '项目对话' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: '收起项目对话' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: '新建会话' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: '新建事项' })).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: '收起项目对话' }));
+
+    expect(screen.queryByRole('complementary', { name: '项目对话' })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: '展开项目对话' })).toBeInTheDocument();
+  });
+
   it('renders only virtual records in preview mode', () => {
     render(
       <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
@@ -17,8 +37,8 @@ describe('CasesWorkspacePage', () => {
     );
 
     expect(screen.getByText('预览模式：仅展示虚构事项')).toBeInTheDocument();
-    expect(screen.getByText('虚构商贸企业季度开票与优惠咨询')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: '新建事项' })).toBeInTheDocument();
+    expect(screen.getAllByText('虚构商贸企业季度开票与优惠咨询').length).toBeGreaterThan(0);
+    expect(screen.getByRole('button', { name: '新建会话' })).toBeInTheDocument();
   });
 
   it('creates a new immutable preview profile after confirming a fact candidate', () => {
@@ -72,12 +92,7 @@ describe('CasesWorkspacePage', () => {
       </QueryClientProvider>,
     );
 
-    const detailButton = screen.getAllByRole('button', { name: '查看画像' })[0];
-    if (detailButton === undefined) {
-      throw new Error('预览事项缺少查看画像入口');
-    }
-    fireEvent.click(detailButton);
-    fireEvent.click(screen.getByRole('button', { name: '运行受控分析' }));
+    fireEvent.click(screen.getByRole('button', { name: '风险审查' }));
 
     expect(screen.getByText('规则版本：RISK-INVOICE-001-v1')).toBeInTheDocument();
     expect(screen.getByText('风险结论由确定性规则生成，模型不能修改。')).toBeInTheDocument();

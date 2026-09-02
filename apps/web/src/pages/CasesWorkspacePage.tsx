@@ -8,7 +8,6 @@ import {
   Empty,
   Form,
   Input,
-  Layout,
   List,
   Select,
   Space,
@@ -18,6 +17,17 @@ import {
 } from 'antd';
 import { useState } from 'react';
 import { Navigate, useNavigate, useSearchParams } from 'react-router-dom';
+import {
+  ArrowUp,
+  ChevronDown,
+  FileSearch,
+  LayoutList,
+  Paperclip,
+  Plus,
+  Search,
+  ShieldAlert,
+  UserRound,
+} from 'lucide-react';
 
 import {
   confirmCaseFacts,
@@ -37,12 +47,10 @@ import {
   type ConversationResponse,
   type MessageData,
 } from '@/api/conversations';
-import { clearAccessToken, getAccessToken } from '@/api/session';
+import { getAccessToken } from '@/api/session';
 import { submitQueryRun, type QueryRunResponse } from '@/api/queryRuns';
 import { RiskFindingCard } from '@/components/risk/RiskFindingCard';
 import { applyPreviewFactDecision } from '@/pages/casePreview';
-
-const { Header, Content, Footer } = Layout;
 
 interface CaseFormValues {
   title: string;
@@ -172,10 +180,15 @@ export function CasesWorkspacePage() {
   const queryClient = useQueryClient();
   const accessToken = getAccessToken();
   const isPreview = searchParameters.get('preview') === '1';
-  const [createOpen, setCreateOpen] = useState(false);
+  const [createOpen, setCreateOpen] = useState(searchParameters.get('create') === '1');
   const [factConfirmationOpen, setFactConfirmationOpen] = useState(false);
   const [conversationOpen, setConversationOpen] = useState(false);
-  const [selectedCaseId, setSelectedCaseId] = useState<string | null>(null);
+  const [historyCollapsed, setHistoryCollapsed] = useState(false);
+  const [profileDrawerOpen, setProfileDrawerOpen] = useState(false);
+  const [activeTool, setActiveTool] = useState('项目上下文');
+  const [selectedCaseId, setSelectedCaseId] = useState<string | null>(
+    isPreview ? previewDetail.data.case.id : null,
+  );
   const [previewVisibleDetail, setPreviewVisibleDetail] = useState(previewDetail);
   const [previewVisibleCases, setPreviewVisibleCases] = useState(previewCases);
   const [activeConversation, setActiveConversation] = useState<ConversationResponse | null>(null);
@@ -308,13 +321,6 @@ export function CasesWorkspacePage() {
     return <Navigate to="/" replace />;
   }
 
-  function openDetail(caseId: string) {
-    setSelectedCaseId(caseId);
-    setActiveConversation(null);
-    setPreviewMessages([]);
-    setVisibleQueryRun(null);
-  }
-
   function submit(values: CaseFormValues) {
     if (isPreview) {
       setSelectedCaseId(previewDetail.data.case.id);
@@ -440,120 +446,103 @@ export function CasesWorkspacePage() {
     appendMessageMutation.mutate({ conversationId: activeConversation.data.id, text });
   }
 
-  function logout() {
-    clearAccessToken();
-    void navigate('/');
-  }
-
   return (
-    <Layout className="app-shell">
-      <Header className="app-header policy-header">
-        <div>
-          <Typography.Title level={3} className="brand-title">
-            TaxMind Pro
-          </Typography.Title>
-          <Typography.Text className="brand-subtitle">事项工作台</Typography.Text>
+    <div className={`workspace-layout ${historyCollapsed ? 'is-history-collapsed' : ''}`}>
+      {!historyCollapsed ? (
+        <aside aria-label="项目对话" className="workspace-history">
+          <div className="workspace-history-heading">
+            <div className="workspace-history-title">项目对话</div>
+            <button aria-label="新建事项" className="workspace-new-case" onClick={() => {
+              setCreateOpen(true);
+            }}><Plus size={14} /></button>
+          </div>
+          <select aria-label="当前项目" className="workspace-project-picker" value={selectedCaseId ?? ''} onChange={(event) => {
+            setSelectedCaseId(event.target.value);
+            setActiveConversation(null);
+            setPreviewMessages([]);
+            setVisibleQueryRun(null);
+          }}>
+            <option value="" disabled>选择当前项目</option>
+            {visibleCases?.data.map((item) => <option key={item.id} value={item.id}>{item.title}</option>)}
+          </select>
+          <Button className="workspace-new-conversation" block icon={<Plus size={15} />} onClick={startConversation} disabled={visibleDetail === undefined} loading={!isPreview && createConversationMutation.isPending}>
+            新建会话
+          </Button>
+          {isPreview ? (
+            <>
+              <div className="workspace-history-group">今天</div>
+              <div className="workspace-history-item is-current">优惠资格与开票风险<button aria-label="删除会话" disabled>×</button></div>
+              <div className="workspace-history-item">补充纳税人身份<button aria-label="删除会话" disabled>×</button></div>
+              <div className="workspace-history-group">昨天</div>
+              <div className="workspace-history-item">办理材料核验<button aria-label="删除会话" disabled>×</button></div>
+            </>
+          ) : (
+            <div className="workspace-history-notice">后端暂未提供会话列表与删除接口。新建会话后可在右侧继续录入消息。</div>
+          )}
+        </aside>
+      ) : null}
+      <main className="workspace-chat">
+        <header className="workspace-projectbar">
+          <div className="workspace-project-name">
+            <button aria-label={historyCollapsed ? '展开项目对话' : '收起项目对话'} className="workspace-history-toggle" onClick={() => {
+              setHistoryCollapsed((current) => !current);
+            }}>
+              {historyCollapsed ? '›' : '‹'}
+            </button>
+            <span>{visibleDetail?.data.case.title ?? '请选择一个事项'}</span>
+            <ChevronDown aria-hidden="true" size={15} />
+          </div>
+          <div className="workspace-tools">
+            <button className={activeTool === '结构化分析' ? 'is-active' : ''} onClick={() => { setActiveTool('结构化分析'); setProfileDrawerOpen(true); }}><LayoutList size={14} />结构化分析</button>
+            <button className={activeTool === '风险审查' ? 'is-active' : ''} onClick={() => { setActiveTool('风险审查'); runControlledAnalysis(); }}><ShieldAlert size={14} />风险审查</button>
+            <button className={activeTool === '政策证据' ? 'is-active' : ''} onClick={() => { setActiveTool('政策证据'); void navigate(`/policies${isPreview ? '?preview=1' : ''}`); }}><FileSearch size={14} />政策证据</button>
+            <button className={activeTool === '项目上下文' ? 'is-active' : ''} onClick={() => {
+              setActiveTool('项目上下文');
+            }}><UserRound size={14} />项目上下文</button>
+          </div>
+        </header>
+        <div className="workspace-chat-body">
+          <div className="workspace-chat-stream">
+            <div className="workspace-welcome">
+              <h1>今天想先核验什么？</h1>
+              <p>围绕当前项目补充事实、查询政策或执行受控风险审查。</p>
+            </div>
+            {visibleDetail === undefined ? <Empty description="请选择一个事项后继续" /> : null}
+            {visibleDetail !== undefined ? (
+              <div className="workspace-message workspace-message-assistant">
+                <strong>项目上下文已加载</strong><br />
+                当前画像 v{visibleDetail.data.profile.profile_version} · 地区 {visibleDetail.data.profile.region_code} · 业务日期 {visibleDetail.data.profile.business_date}
+              <div className="workspace-system-card">事实与风险结论只来自已保存的画像、确定性规则与已发布证据；模型回答尚未接入。</div>
+              {isPreview ? <div className="workspace-preview-note">预览模式：仅展示虚构事项</div> : null}
+              </div>
+            ) : null}
+            {(isPreview ? previewMessages : (messagesQuery.data?.data ?? [])).map((message) => (
+              <div className="workspace-message workspace-message-user" key={message.id}>{message.content_text}</div>
+            ))}
+            {visibleQueryRun !== null ? (
+              <div className="workspace-analysis-result">
+                <div className="workspace-analysis-heading">受控分析运行 <span>{visibleQueryRun.data.status === 'completed' ? '已完成' : '需要补充事实'}</span></div>
+                {visibleQueryRun.data.follow_up_fact_keys.length > 0 ? <div className="workspace-system-card">请补充：{visibleQueryRun.data.follow_up_fact_keys.join('、')}</div> : null}
+                {visibleQueryRun.data.rule_results.map((rule) => <RiskFindingCard key={rule.rule_version_id} finding={rule} />)}
+              </div>
+            ) : null}
+          </div>
+          <div className="workspace-composer">
+            <Input.TextArea value={messageDraft} onChange={(event) => {
+              setMessageDraft(event.target.value);
+            }} placeholder={activeConversation === null ? '请先新建会话后再录入匿名化咨询内容…' : '在当前项目中补充事实或提出问题…'} autoSize={{ minRows: 3, maxRows: 5 }} maxLength={4000} />
+            <div className="workspace-composer-footer">
+              <div>
+                <span className="workspace-chip" aria-disabled="true"><Paperclip size={13} />添加附件说明</span>
+                <button className="workspace-chip" onClick={() => void navigate(`/policies${isPreview ? '?preview=1' : ''}`)}><Search size={13} />查政策</button>
+              </div>
+              <button aria-label="保存用户消息" className="workspace-send" onClick={sendMessage} disabled={messageDraft.trim().length === 0 || activeConversation === null} aria-describedby={activeConversation === null ? 'workspace-send-help' : undefined}><ArrowUp size={16} /></button>
+            </div>
+            {activeConversation === null ? <span className="workspace-send-help" id="workspace-send-help">当前未创建会话，不能保存消息。</span> : null}
+            {appendMessageMutation.isError ? <Alert type="error" showIcon message="消息未保存，请检查输入、权限和后端服务后重试。" /> : null}
+          </div>
         </div>
-        <Space>
-          <Button
-            ghost
-            onClick={() => {
-              void navigate(`/policies${isPreview ? '?preview=1' : ''}`);
-            }}
-          >
-            政策检索
-          </Button>
-          <Button
-            ghost
-            onClick={() => {
-              void navigate(`/procedures${isPreview ? '?preview=1' : ''}`);
-            }}
-          >
-            办税事项库
-          </Button>
-          <Button ghost onClick={logout}>
-            {isPreview ? '返回登录' : '退出'}
-          </Button>
-        </Space>
-      </Header>
-      <Content className="app-content">
-        <Space direction="vertical" size={24} className="full-width">
-          <Alert
-            type={isPreview ? 'info' : 'warning'}
-            showIcon
-            message={isPreview ? '预览模式：仅展示虚构事项' : '内部专业辅助：请仅录入最小必要的匿名化事实'}
-            description={
-              isPreview
-                ? '本页面没有访问后端或真实客户资料。'
-                : '事项与画像会形成可追溯版本；真实身份信息、联系方式和统一社会信用代码不应录入。'
-            }
-          />
-          <Card
-            title="我的事项"
-            extra={
-              <Button
-                type="primary"
-                onClick={() => {
-                  setCreateOpen(true);
-                }}
-              >
-                新建事项
-              </Button>
-            }
-          >
-            {casesQuery.isFetching && !isPreview ? <Spin tip="正在加载事项…" /> : null}
-            {casesQuery.isError && !isPreview ? (
-              <Alert
-                type="error"
-                showIcon
-                message="事项列表未加载"
-                description="请检查登录权限和后端服务后重试。"
-                action={
-                  <Button
-                    onClick={() => {
-                      void casesQuery.refetch();
-                    }}
-                  >
-                    重试
-                  </Button>
-                }
-              />
-            ) : null}
-            {visibleCases !== undefined && visibleCases.data.length === 0 ? (
-              <Empty description="还没有事项，可先创建一条匿名化或虚构事项" />
-            ) : null}
-            {visibleCases !== undefined && visibleCases.data.length > 0 ? (
-              <List
-                dataSource={visibleCases.data}
-                renderItem={(item) => (
-                  <List.Item
-                    actions={[
-                      <Button
-                        key="detail"
-                        onClick={() => {
-                          openDetail(item.id);
-                        }}
-                      >
-                        查看画像
-                      </Button>,
-                    ]}
-                  >
-                    <List.Item.Meta
-                      title={item.title}
-                      description={`${item.case_no} · 地区 ${item.default_region_code}`}
-                    />
-                    <Space wrap>
-                      <Tag color="blue">{item.status}</Tag>
-                      <Tag>画像 v{item.current_profile_version}</Tag>
-                    </Space>
-                  </List.Item>
-                )}
-              />
-            ) : null}
-          </Card>
-        </Space>
-      </Content>
-      <Footer className="app-footer">TaxMind Pro · 内部专业辅助</Footer>
+      </main>
       <Drawer
         title={isPreview ? '新建虚构事项预览' : '新建匿名化事项'}
         width={560}
@@ -634,9 +623,9 @@ export function CasesWorkspacePage() {
       <Drawer
         title="事项画像"
         width={560}
-        open={selectedCaseId !== null}
+        open={profileDrawerOpen}
         onClose={() => {
-          setSelectedCaseId(null);
+          setProfileDrawerOpen(false);
         }}
         destroyOnHidden
       >
@@ -831,7 +820,7 @@ export function CasesWorkspacePage() {
       <Drawer
         title={activeConversation?.data.title ?? '事项咨询会话'}
         width={640}
-        open={conversationOpen}
+        open={false}
         onClose={() => {
           setConversationOpen(false);
         }}
@@ -922,6 +911,6 @@ export function CasesWorkspacePage() {
           </Button>
         </Space>
       </Drawer>
-    </Layout>
+    </div>
   );
 }

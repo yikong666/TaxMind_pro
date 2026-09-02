@@ -6,4 +6,6 @@
 - `adr/`：已确认的架构决策记录。
 - `runbooks/`：开发、部署和问题排查操作手册。
 
+P0 虚构演示与验收路径见 [runbooks/p0-acceptance.md](runbooks/p0-acceptance.md)。
+
 文档优先级以仓库根目录 `AGENTS.md` 为准。当前源码完成后，源码和测试结果优先于可能漂移的示例配置。
