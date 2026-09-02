@@ -281,6 +281,13 @@ body,
   background: transparent;
 }
 
+.workspace-history-status {
+  display: block;
+  margin-top: 2px;
+  color: #7b8089;
+  font-size: 10px;
+}
+
 .workspace-history-notice {
   margin: 17px 6px;
   color: #858a93;

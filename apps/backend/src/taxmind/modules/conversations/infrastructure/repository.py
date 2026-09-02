@@ -26,6 +26,7 @@ def _conversation_record(model: ConversationModel) -> ConversationRecord:
         summary_version=model.summary_version,
         created_at=_as_utc(model.created_at),
         updated_at=_as_utc(model.updated_at),
+        deleted_at=_as_utc(model.deleted_at) if model.deleted_at else None,
     )
 
 
@@ -65,6 +66,21 @@ class SqlAlchemyConversationsRepository:
                 last_message_at=record.last_message_at,
                 summary_version=record.summary_version,
                 created_at=record.created_at,
+                updated_at=record.updated_at,
+                deleted_at=record.deleted_at,
+            )
+        )
+
+    async def update_conversation_lifecycle(self, record: ConversationRecord) -> None:
+        await self._session.execute(
+            update(ConversationModel)
+            .where(
+                ConversationModel.id == record.id,
+                ConversationModel.org_id == record.org_id,
+            )
+            .values(
+                status=record.status,
+                deleted_at=record.deleted_at,
                 updated_at=record.updated_at,
             )
         )

@@ -3,6 +3,7 @@ import type { components } from '@/api/generated/schema';
 
 export type AppendUserMessageRequest = components['schemas']['AppendUserMessageRequest'];
 export type ConversationContextResponse = components['schemas']['ConversationContextResponse'];
+export type ConversationLifecycleResponse = components['schemas']['ConversationLifecycleResponse'];
 export type ConversationResponse = components['schemas']['ConversationResponse'];
 export type CreateConversationRequest = components['schemas']['CreateConversationRequest'];
 export type MessageData = components['schemas']['MessageData'];
@@ -49,5 +50,28 @@ export function getConversationContext(
   return requestJson<ConversationContextResponse>(
     `/api/v1/conversations/${conversationId}/context`,
     { headers: { Authorization: `Bearer ${accessToken}` } },
+  );
+}
+
+export function deleteConversation(
+  conversationId: string,
+  accessToken: string,
+): Promise<ConversationLifecycleResponse> {
+  return requestJson<ConversationLifecycleResponse>(`/api/v1/conversations/${conversationId}`, {
+    method: 'DELETE',
+    headers: { Authorization: `Bearer ${accessToken}` },
+  });
+}
+
+export function restoreConversation(
+  conversationId: string,
+  accessToken: string,
+): Promise<ConversationLifecycleResponse> {
+  return requestJson<ConversationLifecycleResponse>(
+    `/api/v1/conversations/${conversationId}/restore`,
+    {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${accessToken}` },
+    },
   );
 }

@@ -97,4 +97,32 @@ describe('CasesWorkspacePage', () => {
     expect(screen.getByText('规则版本：RISK-INVOICE-001-v1')).toBeInTheDocument();
     expect(screen.getByText('风险结论由确定性规则生成，模型不能修改。')).toBeInTheDocument();
   });
+
+  it('requires confirmation before deleting and restoring the active preview conversation', () => {
+    render(
+      <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
+        <MemoryRouter initialEntries={['/cases?preview=1']}>
+          <CasesWorkspacePage />
+        </MemoryRouter>
+      </QueryClientProvider>,
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: '新建会话' }));
+    fireEvent.click(screen.getByRole('button', { name: '删除当前会话' }));
+
+    expect(screen.getByText('确认删除会话？')).toBeInTheDocument();
+    const deleteConfirmation = screen
+      .getAllByRole('button', { name: '删除会话' })
+      .find((button) => !button.hasAttribute('disabled'));
+    if (!deleteConfirmation) {
+      throw new Error('未找到可用的删除会话确认按钮');
+    }
+    fireEvent.click(deleteConfirmation);
+    expect(screen.getByText('已删除')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: '恢复当前会话' }));
+    expect(screen.getByText('确认恢复会话？')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: '恢复会话' }));
+    expect(screen.getByText('可继续')).toBeInTheDocument();
+  }, 10_000);
 });

@@ -116,7 +116,7 @@ async def create_review_task(
         ],
     }
     if payload.query_run_id is not None:
-        run = _query_runs(request).get(payload.query_run_id)
+        run = await _query_runs(request).get(payload.query_run_id, principal)
         if run is None or run.org_id != principal.org_id or run.case_id != case_id:
             raise DomainError(code="RESOURCE_NOT_FOUND", message="查询运行不存在或无权访问")
         summary["rule_version_ids"] = [result.rule_version_id for result in run.rule_results]

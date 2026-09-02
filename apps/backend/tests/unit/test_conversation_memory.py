@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from dataclasses import replace
 from datetime import UTC, date, datetime
 from typing import cast
 
@@ -59,10 +60,17 @@ class FakeCasesService:
         return self.detail
 
 
+class AllowCaseAccess:
+    async def get_case(self, case_id: str, principal: Principal) -> CaseDetail:
+        del case_id, principal
+        return cast(CaseDetail, object())
+
+
 class FakeConversationRepository:
     def __init__(self, conversation: ConversationRecord, messages: list[MessageRecord]) -> None:
         self.conversation = conversation
         self.messages = messages
+        self.audit_actions: list[str] = []
 
     async def get_conversation(
         self, conversation_id: str, org_id: str
@@ -101,6 +109,9 @@ class FakeConversationRepository:
     async def create_message(self, record: MessageRecord) -> None:
         self.messages.append(record)
 
+    async def update_conversation_lifecycle(self, record: ConversationRecord) -> None:
+        self.conversation = replace(record)
+
     async def touch_conversation(self, conversation_id: str, occurred_at: datetime) -> None:
         assert conversation_id == self.conversation.id
 
@@ -115,8 +126,8 @@ class FakeConversationRepository:
         occurred_at: datetime,
     ) -> None:
         assert org_id == self.conversation.org_id
-        assert actor_user_id == self.conversation.started_by
-        assert action_code == "conversation.message.appended"
+        assert actor_user_id
+        self.audit_actions.append(action_code)
         assert resource_id == self.conversation.id
         assert request_id
 
@@ -416,3 +427,138 @@ async def test_append_user_message_is_idempotent_without_duplicate_sequence() ->
     assert repeated.memory_sync_status == "already_recorded"
     assert repeated.message.id == first.message.id
     assert [message.sequence_no for message in messages] == [1]
+
+
+async def test_deleted_conversation_rejects_message_history_reads() -> None:
+    now = datetime.now(UTC)
+    conversation = ConversationRecord(
+        id="conversation-001",
+        org_id="org-001",
+        case_id="case-001",
+        title="虚构咨询会话",
+        status="deleted",
+        started_by="user-001",
+        last_message_at=now,
+        summary_version=0,
+        created_at=now,
+        updated_at=now,
+    )
+    service = ConversationsService(
+        uow_factory=cast(
+            ConversationsUnitOfWorkFactory,
+            FakeConversationUnitOfWorkFactory(FakeConversationRepository(conversation, [])),
+        ),
+        cases_service=cast(CasesService, AllowCaseAccess()),
+        short_memory=RedisShortMemoryAdapter(cast(Redis, FakeRedis()), ttl_seconds=259200),
+        recent_message_limit=20,
+    )
+    principal = Principal(
+        user_id="user-001",
+        org_id="org-001",
+        session_id="session-001",
+        roles=frozenset({"consultant"}),
+        permissions=frozenset({"cases:read", "cases:write"}),
+    )
+
+    with pytest.raises(DomainError) as captured:
+        await service.list_messages(
+            conversation.id,
+            principal,
+            before_sequence=None,
+            limit=20,
+        )
+
+    assert captured.value.code == "RESOURCE_NOT_FOUND"
+
+
+async def test_conversation_owner_can_soft_delete_and_restore_with_audit() -> None:
+    now = datetime.now(UTC)
+    conversation = ConversationRecord(
+        id="conversation-001",
+        org_id="org-001",
+        case_id="case-001",
+        title="虚构咨询会话",
+        status="active",
+        started_by="user-001",
+        last_message_at=now,
+        summary_version=0,
+        created_at=now,
+        updated_at=now,
+    )
+    repository = FakeConversationRepository(conversation, [])
+    service = ConversationsService(
+        uow_factory=cast(
+            ConversationsUnitOfWorkFactory,
+            FakeConversationUnitOfWorkFactory(repository),
+        ),
+        cases_service=cast(CasesService, AllowCaseAccess()),
+        short_memory=RedisShortMemoryAdapter(cast(Redis, FakeRedis()), ttl_seconds=259200),
+        recent_message_limit=20,
+    )
+    principal = Principal(
+        user_id="user-001",
+        org_id="org-001",
+        session_id="session-001",
+        roles=frozenset({"consultant"}),
+        permissions=frozenset({"cases:read", "cases:write"}),
+    )
+
+    deleted = await service.soft_delete_conversation(
+        conversation.id,
+        request_id="request-delete",
+        principal=principal,
+    )
+    restored = await service.restore_conversation(
+        conversation.id,
+        request_id="request-restore",
+        principal=principal,
+    )
+
+    assert deleted.status == "deleted"
+    assert deleted.deleted_at is not None
+    assert restored.status == "active"
+    assert restored.deleted_at is None
+    assert repository.audit_actions == ["conversation.deleted", "conversation.restored"]
+
+
+async def test_non_owner_cannot_soft_delete_conversation() -> None:
+    now = datetime.now(UTC)
+    conversation = ConversationRecord(
+        id="conversation-001",
+        org_id="org-001",
+        case_id="case-001",
+        title="虚构咨询会话",
+        status="active",
+        started_by="user-001",
+        last_message_at=None,
+        summary_version=0,
+        created_at=now,
+        updated_at=now,
+    )
+    repository = FakeConversationRepository(conversation, [])
+    service = ConversationsService(
+        uow_factory=cast(
+            ConversationsUnitOfWorkFactory,
+            FakeConversationUnitOfWorkFactory(repository),
+        ),
+        cases_service=cast(CasesService, AllowCaseAccess()),
+        short_memory=RedisShortMemoryAdapter(cast(Redis, FakeRedis()), ttl_seconds=259200),
+        recent_message_limit=20,
+    )
+    principal = Principal(
+        user_id="user-002",
+        org_id="org-001",
+        session_id="session-002",
+        roles=frozenset({"consultant"}),
+        permissions=frozenset({"cases:read", "cases:write"}),
+    )
+
+    with pytest.raises(DomainError) as captured:
+        await service.soft_delete_conversation(
+            conversation.id,
+            request_id="request-delete",
+            principal=principal,
+        )
+
+    assert captured.value.code == "RESOURCE_NOT_FOUND"
+    assert repository.conversation.status == "active"

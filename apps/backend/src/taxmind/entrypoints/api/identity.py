@@ -45,6 +45,10 @@ class DevelopmentBootstrapRequest(BaseModel):
     admin_name: str = Field(min_length=2, max_length=100)
     email: str = Field(min_length=3, max_length=254)
     password: SecretStr = Field(min_length=12, max_length=128)
+    role_code: str = Field(
+        default="org_admin",
+        pattern="^(org_admin|consultant|reviewer|knowledge_admin|auditor)$",
+    )
 
 
 class MemberCreateRequest(BaseModel):
@@ -196,6 +200,7 @@ async def development_bootstrap(
             admin_name=payload.admin_name,
             email=str(payload.email),
             password=payload.password.get_secret_value(),
+            role_code=payload.role_code,
             request_id=request.state.request_id,
         )
     )

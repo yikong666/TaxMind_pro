@@ -4,53 +4,44 @@ from datetime import UTC, date, datetime
 from pathlib import Path
 
 import pytest
+from _query_run_support import make_service
 
-from taxmind.modules.query.application.service import QueryRunCommand, QueryRunService
+from taxmind.modules.query.application.service import QueryRunCommand
 from taxmind.modules.risk.domain import RiskRuleDefinition
-
-
-class _AuditRecorder:
-    def __init__(self) -> None:
-        self.entries: list[dict[str, object]] = []
-
-    async def record(self, entry: dict[str, object]) -> None:
-        self.entries.append(entry)
 
 
 @pytest.mark.asyncio
 async def test_p0_golden_scope_gate_requires_business_date_and_region() -> None:
-    audit = _AuditRecorder()
-    service = QueryRunService(rules=(), audit_recorder=audit)
+    service, principal, repository = make_service(
+        rules=(),
+        org_id="golden-org",
+        case_id="golden-case-scope",
+        conversation_id="golden-conversation-scope",
+        user_id="golden-user",
+    )
 
     run = await service.submit(
         QueryRunCommand(
             case_id="golden-case-scope",
+            conversation_id="golden-conversation-scope",
             profile_version=1,
             query="虚构优惠是否适用",
             facts={},
+            idempotency_key="golden-scope-key",
             request_id="golden-request-scope",
-            org_id="golden-org",
-            actor_id="golden-user",
             occurred_at=datetime(2026, 9, 1, tzinfo=UTC),
-        )
+        ),
+        principal,
     )
 
-    assert run.status == "need_info"
+    assert run.status == "needs_input"
     assert run.follow_up_fact_keys == ("business_date", "region_code")
-    assert audit.entries[0]["after_json"] == {
-        "case_id": "golden-case-scope",
-        "profile_version": 1,
-        "route_code": None,
-        "follow_up_fact_keys": ["business_date", "region_code"],
-        "rule_version_ids": [],
-    }
-    assert "query" not in audit.entries[0]["after_json"]
+    assert repository.audit_actions == ["query.run.needs_input"]
 
 
 @pytest.mark.asyncio
 async def test_p0_golden_risk_result_is_deterministic_and_retains_basis() -> None:
-    audit = _AuditRecorder()
-    service = QueryRunService(
+    service, principal, _ = make_service(
         rules=(
             RiskRuleDefinition(
                 rule_version_id="golden-risk-v1",
@@ -60,12 +51,16 @@ async def test_p0_golden_risk_result_is_deterministic_and_retains_basis() -> Non
                 basis_chunk_ids=("golden-basis-chunk",),
             ),
         ),
-        audit_recorder=audit,
+        org_id="golden-org",
+        case_id="golden-case-risk",
+        conversation_id="golden-conversation-risk",
+        user_id="golden-user",
     )
 
     run = await service.submit(
         QueryRunCommand(
             case_id="golden-case-risk",
+            conversation_id="golden-conversation-risk",
             profile_version=1,
             query="虚构风险审查",
             facts={
@@ -73,14 +68,14 @@ async def test_p0_golden_risk_result_is_deterministic_and_retains_basis() -> Non
                 "region_code": "440300",
                 "invoice_amount": 100,
             },
+            idempotency_key="golden-risk-key",
             request_id="golden-request-risk",
-            org_id="golden-org",
-            actor_id="golden-user",
             occurred_at=datetime(2026, 9, 1, tzinfo=UTC),
-        )
+        ),
+        principal,
     )
 
-    assert run.status == "completed"
+    assert run.status == "queued"
     assert [(item.status, item.severity, item.basis_chunk_ids) for item in run.rule_results] == [
         ("hit", "high", ("golden-basis-chunk",))
     ]

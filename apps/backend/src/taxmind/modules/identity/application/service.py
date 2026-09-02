@@ -48,6 +48,7 @@ class BootstrapCommand:
     admin_name: str
     email: str
     password: str
+    role_code: str
     request_id: str
 
 
@@ -292,6 +293,7 @@ class IdentityService:
     async def bootstrap_development_admin(self, command: BootstrapCommand) -> AuthenticatedSession:
         if self._settings.app_env != "development":
             raise DomainError(code="AUTH_FORBIDDEN", message="仅开发环境允许初始化管理员")
+        role = require_role_code(command.role_code)
         now = datetime.now(UTC)
         async with self._uow_factory() as uow:
             repository = _repository(uow)
@@ -315,7 +317,7 @@ class IdentityService:
                 id=new_id(),
                 org_id=org.id,
                 user_id=user.id,
-                role_code=RoleCode.ORG_ADMIN.value,
+                role_code=role.value,
                 status="active",
                 joined_at=now,
                 version_no=1,

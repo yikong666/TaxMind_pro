@@ -1,0 +1,63 @@
+{
+  "manifest_version": 1,
+  "approved_at": "2026-09-02T00:00:00Z",
+  "approval_scope": "User approved these four public official sources for a low-frequency sample download only.",
+  "items": [
+    {
+      "id": "national-2023-12",
+      "url": "https://fgk.chinatax.gov.cn/zcfgk/c102416/c5210453/content.html",
+      "expected_format": "html",
+      "title": "财政部 税务总局关于进一步支持小微企业和个体工商户发展有关税费政策的公告",
+      "issuing_authority": "财政部、国家税务总局",
+      "region_code": "000000",
+      "doc_no": "财政部 税务总局公告2023年第12号",
+      "doc_type": "announcement",
+      "source_level": "A",
+      "publish_date": "2023-08-02",
+      "effective_start": "2023-01-01",
+      "effective_end": "2027-12-31"
+    },
+    {
+      "id": "national-policy-guide-2",
+      "url": "https://www.gov.cn/zhengce/202308/P020230820478408274441.pdf",
+      "expected_format": "pdf",
+      "title": "支持小微企业和个体工商户发展税费优惠政策指引",
+      "issuing_authority": "财政部、国家税务总局",
+      "region_code": "000000",
+      "doc_no": null,
+      "doc_type": "guide",
+      "source_level": "A",
+      "publish_date": "2023-08-20",
+      "effective_start": null,
+      "effective_end": null
+    },
+    {
+      "id": "guangdong-2023-qa",
+      "url": "https://guangdong.chinatax.gov.cn/gdsw/rdwd/202310/814cec405f224497a8e5b37739bfb28b/files/9ddeb4ef8e394c51b3c452c613a37575.pdf",
+      "expected_format": "pdf",
+      "title": "支持小微企业和个体工商户发展税费优惠政策即问即答（2023年版）",
+      "issuing_authority": "国家税务总局广东省税务局",
+      "region_code": "440000",
+      "doc_no": null,
+      "doc_type": "faq",
+      "source_level": "B",
+      "publish_date": "2023-10-01",
+      "effective_start": null,
+      "effective_end": null
+    },
+    {
+      "id": "shenzhen-2023-individual-businesses",
+      "url": "https://www.sz.gov.cn/zfgb/2023/gb1289/content/post_10647245.html",
+      "expected_format": "html",
+      "title": "深圳市人民政府办公厅关于印发深圳市扶持个体工商户高质量发展若干措施的通知",
+      "issuing_authority": "深圳市人民政府办公厅",
+      "region_code": "440300",
+      "doc_no": "深府办〔2023〕7号",
+      "doc_type": "announcement",
+      "source_level": "B",
+      "publish_date": "2023-06-12",
+      "effective_start": "2023-06-01",
+      "effective_end": null
+    }
+  ]
+}

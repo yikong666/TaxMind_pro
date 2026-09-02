@@ -39,6 +39,13 @@ def test_jwt_round_trip_preserves_tenant_bound_principal() -> None:
     assert restored.has_permission("members:write")
 
 
+def test_knowledge_admin_permissions_remain_separate_from_org_administration() -> None:
+    permissions = permissions_for_role("knowledge_admin")
+
+    assert "knowledge:write" in permissions
+    assert "members:write" not in permissions
+
+
 def test_jwt_rejects_invalid_token_without_claim_details() -> None:
     tokens = JwtTokenService(Settings(app_env="test"))
 

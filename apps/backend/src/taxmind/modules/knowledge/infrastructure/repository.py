@@ -455,6 +455,26 @@ class SqlAlchemyKnowledgeRepository:
         model = await self._session.scalar(statement)
         return _snapshot_record(model) if model else None
 
+    async def get_active_snapshot(
+        self, *, snapshot_type: str, org_id: str | None
+    ) -> KnowledgeSnapshotRecord | None:
+        statement = (
+            select(KnowledgeSnapshotModel)
+            .where(
+                KnowledgeSnapshotModel.snapshot_type == snapshot_type,
+                KnowledgeSnapshotModel.status == "active",
+                KnowledgeSnapshotModel.org_id.is_(None)
+                if org_id is None
+                else KnowledgeSnapshotModel.org_id == org_id,
+            )
+            .order_by(
+                KnowledgeSnapshotModel.activated_at.desc(),
+                KnowledgeSnapshotModel.created_at.desc(),
+            )
+        )
+        model = await self._session.scalar(statement)
+        return _snapshot_record(model) if model else None
+
     async def activate_snapshot(self, record: KnowledgeSnapshotRecord) -> None:
         model = await self._session.get(KnowledgeSnapshotModel, record.id)
         if model is None:

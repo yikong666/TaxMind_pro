@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import hashlib
 import logging
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from datetime import UTC, datetime
 from typing import Protocol
 
@@ -200,6 +200,75 @@ class ConversationsService:
         source = "mysql_restored" if status == "synced" else "mysql_only"
         return ConversationContext(state=state, memory_source=source)
 
+    async def soft_delete_conversation(
+        self,
+        conversation_id: str,
+        *,
+        request_id: str,
+        principal: Principal,
+    ) -> ConversationRecord:
+        return await self._transition_conversation_lifecycle(
+            conversation_id,
+            target_status="deleted",
+            request_id=request_id,
+            principal=principal,
+        )
+
+    async def restore_conversation(
+        self,
+        conversation_id: str,
+        *,
+        request_id: str,
+        principal: Principal,
+    ) -> ConversationRecord:
+        return await self._transition_conversation_lifecycle(
+            conversation_id,
+            target_status="active",
+            request_id=request_id,
+            principal=principal,
+        )
+
+    async def _transition_conversation_lifecycle(
+        self,
+        conversation_id: str,
+        *,
+        target_status: str,
+        request_id: str,
+        principal: Principal,
+    ) -> ConversationRecord:
+        _require_conversation_write(principal)
+        now = datetime.now(UTC)
+        async with self._uow_factory() as uow:
+            repository = _repository(uow)
+            conversation = await repository.lock_conversation(conversation_id, principal.org_id)
+            if conversation is None or not _can_manage_conversation(conversation, principal):
+                raise DomainError(code="RESOURCE_NOT_FOUND", message="会话不存在或无权管理")
+            if conversation.status == target_status:
+                return conversation
+            if conversation.status not in {"active", "deleted"}:
+                raise DomainError(code="RESOURCE_CONFLICT", message="当前会话状态不允许此操作")
+            updated = replace(
+                conversation,
+                status=target_status,
+                deleted_at=now if target_status == "deleted" else None,
+                updated_at=now,
+            )
+            await repository.update_conversation_lifecycle(updated)
+            await repository.create_audit_log(
+                org_id=principal.org_id,
+                actor_user_id=principal.user_id,
+                action_code=(
+                    "conversation.deleted"
+                    if target_status == "deleted"
+                    else "conversation.restored"
+                ),
+                resource_id=conversation.id,
+                request_id=request_id,
+                occurred_at=now,
+            )
+            await uow.commit()
+        return updated
+
     async def _accessible_conversation(
         self, conversation_id: str, principal: Principal
     ) -> ConversationRecord:
@@ -207,7 +276,7 @@ class ConversationsService:
             conversation = await _repository(uow).get_conversation(
                 conversation_id, principal.org_id
             )
-        if conversation is None:
+        if conversation is None or conversation.status != "active":
             raise DomainError(code="RESOURCE_NOT_FOUND", message="会话不存在或无权访问")
         await self._cases_service.get_case(conversation.case_id, principal)
         return conversation
@@ -261,6 +330,15 @@ def _repository(uow: SqlAlchemyConversationsUnitOfWork) -> SqlAlchemyConversatio
 def _require_conversation_access(principal: Principal) -> None:
     if not principal.has_permission("cases:read"):
         raise DomainError(code="AUTH_FORBIDDEN", message="当前角色无会话访问权限")
+
+
+def _require_conversation_write(principal: Principal) -> None:
+    if not principal.has_permission("cases:write"):
+        raise DomainError(code="AUTH_FORBIDDEN", message="当前角色无会话管理权限")
+
+
+def _can_manage_conversation(conversation: ConversationRecord, principal: Principal) -> bool:
+    return conversation.started_by == principal.user_id or "org_admin" in principal.roles
 
 
 def _normalized_title(value: str) -> str:

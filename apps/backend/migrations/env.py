@@ -18,6 +18,7 @@ from taxmind.modules.feedback.infrastructure import models as feedback_models  #
 from taxmind.modules.identity.infrastructure import models as identity_models  # noqa: F401
 from taxmind.modules.knowledge.infrastructure import models as knowledge_models  # noqa: F401
 from taxmind.modules.procedures.infrastructure import models as procedure_models  # noqa: F401
+from taxmind.modules.query.infrastructure import models as query_models  # noqa: F401
 from taxmind.modules.reviews.infrastructure import models as review_models  # noqa: F401
 from taxmind.modules.sources.infrastructure import models as source_models  # noqa: F401
 

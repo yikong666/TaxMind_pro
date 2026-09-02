@@ -111,7 +111,7 @@ def build_container(
         SqlAlchemyProceduresUnitOfWorkFactory,
     )
     from taxmind.modules.query.application.service import QueryRunService
-    from taxmind.modules.query.infrastructure.audit import SqlAlchemyQueryAuditRecorder
+    from taxmind.modules.query.infrastructure.uow import SqlAlchemyQueryRunsUnitOfWorkFactory
     from taxmind.modules.reviews.application.service import ReviewService
     from taxmind.modules.reviews.infrastructure.uow import SqlAlchemyReviewsUnitOfWorkFactory
     from taxmind.modules.sources.application.service import SourcesService
@@ -131,10 +131,6 @@ def build_container(
     audit_service = AuditService(uow_factory=SqlAlchemyAuditUnitOfWorkFactory(sessions))
     feedback_service = FeedbackService(uow_factory=SqlAlchemyFeedbackUnitOfWorkFactory(sessions))
     reviews_service = ReviewService(uow_factory=SqlAlchemyReviewsUnitOfWorkFactory(sessions))
-    query_runs_service = QueryRunService(
-        rules=(),
-        audit_recorder=SqlAlchemyQueryAuditRecorder(sessions),
-    )
     cases_service = CasesService(uow_factory=SqlAlchemyCasesUnitOfWorkFactory(sessions))
     from redis.asyncio import Redis
 
@@ -159,6 +155,11 @@ def build_container(
     )
     knowledge_snapshot_service = KnowledgeSnapshotService(
         uow_factory=SqlAlchemyKnowledgeUnitOfWorkFactory(sessions)
+    )
+    query_runs_service = QueryRunService(
+        rules=(),
+        uow_factory=SqlAlchemyQueryRunsUnitOfWorkFactory(sessions),
+        snapshot_resolver=knowledge_snapshot_service,
     )
     manual_import_service = ManualImportService(
         sources=sources_service,

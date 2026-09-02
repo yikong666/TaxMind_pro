@@ -47,6 +47,8 @@ class ConversationData(BaseModel):
     last_message_at: datetime | None
     summary_version: int
     created_at: datetime
+    updated_at: datetime
+    deleted_at: datetime | None
 
 
 class MessageData(BaseModel):
@@ -80,6 +82,11 @@ class ConversationContextData(BaseModel):
 class ConversationResponse(BaseModel):
     data: ConversationData
     memory_sync_status: str
+    meta: ResponseMeta
+
+
+class ConversationLifecycleResponse(BaseModel):
+    data: ConversationData
     meta: ResponseMeta
 
 
@@ -121,6 +128,8 @@ def _conversation_data(conversation: ConversationRecord) -> ConversationData:
         last_message_at=conversation.last_message_at,
         summary_version=conversation.summary_version,
         created_at=conversation.created_at,
+        updated_at=conversation.updated_at,
+        deleted_at=conversation.deleted_at,
     )
 
 
@@ -229,3 +238,34 @@ async def get_conversation_context(
 ) -> ConversationContextResponse:
     context = await _service(request).get_context(conversation_id, principal)
     return ConversationContextResponse(data=_context_data(context), meta=_meta(request))
+
+
+@router.delete("/conversations/{conversation_id}", response_model=ConversationLifecycleResponse)
+async def soft_delete_conversation(
+    conversation_id: str,
+    request: Request,
+    principal: Annotated[Principal, Depends(current_principal)],
+) -> ConversationLifecycleResponse:
+    conversation = await _service(request).soft_delete_conversation(
+        conversation_id,
+        request_id=request.state.request_id,
+        principal=principal,
+    )
+    return ConversationLifecycleResponse(data=_conversation_data(conversation), meta=_meta(request))
+
+
+@router.post(
+    "/conversations/{conversation_id}/restore",
+    response_model=ConversationLifecycleResponse,
+)
+async def restore_conversation(
+    conversation_id: str,
+    request: Request,
+    principal: Annotated[Principal, Depends(current_principal)],
+) -> ConversationLifecycleResponse:
+    conversation = await _service(request).restore_conversation(
+        conversation_id,
+        request_id=request.state.request_id,
+        principal=principal,
+    )
+    return ConversationLifecycleResponse(data=_conversation_data(conversation), meta=_meta(request))

@@ -15,3 +15,9 @@ export function submitQueryRun(
     body: JSON.stringify(payload),
   });
 }
+
+export function getQueryRun(runId: string, accessToken: string): Promise<QueryRunResponse> {
+  return requestJson<QueryRunResponse>(`/api/v1/query-runs/${runId}`, {
+    headers: { Authorization: `Bearer ${accessToken}` },
+  });
+}

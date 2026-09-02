@@ -1,5 +1,40 @@
 # Changelog
 
+## 2026-09-02 - 已确认官方小样本资料下载
+
+- 用户确认后，新增版本化来源清单与低频下载工具；工具限制为清单内 HTTPS URL，校验格式与大小，记录下载时间、URL、MIME、SHA-256 和安全失败摘要，原件留在 Git 忽略的本地目录。
+- 已成功下载并解析预检国家级 HTML、国家级 PDF 和广东 PDF；深圳市政府确认 URL 因本机 TLS `BAD_ECPOINT` 下载失败，未替换来源、未导入、未发布。
+- 新增操作手册，明确成功资料后续必须走来源登记、受控上传、候选审核、发布批次和快照门禁；当前 PDF 解析各只得到一个块，尚不能宣称分块质量或检索验收通过。
+
+影响模块：Official Sample Manifest、Controlled Download Utility、Local Sample Runbook。
+
+## 2026-09-02 - 工作台查询运行 SSE 重放
+
+- 新增 `analysis_run_events` 及 Alembic `20260902_0013`：运行状态、补充事实、失败安全摘要、最终回答增量和完成状态均以单调序号持久化，可按 `Last-Event-ID` 重放。
+- 新增受认证的 `GET /api/v1/query-runs/{run_id}/events` SSE 接口；只返回已持久化的安全载荷，事件中不保存或发送 Prompt、密钥、私有推理或思维链。
+- 工作台通过带 Bearer 请求头的 `fetch` 流读取事件，断开后携带事件游标重连，并用受认证的运行读取接口对账最终状态。为避免令牌进入 URL，未采用原生 `EventSource`。
+
+影响模块：Query Run Event、MySQL Migration、SSE OpenAPI Contract、Web Cases Workspace。
+
+验证限制：事件迁移已完成离线 SQL 生成；Docker Desktop daemon 当时不可连接，尚未进行真实 MySQL 升降级与运行中断重连验证。
+
+## 2026-09-02 - 工作台查询运行与最终回答持久化
+
+- 新增 `analysis_runs` 主数据表及迁移：运行固定记录事项事实、知识快照、检索计划、规则版本、证据 ID、状态、错误安全摘要和最终回答消息关联。
+- 查询提交改为会话内的原子写入：用户问题与运行记录同事务保存；资料不足时进入 `needs_input`，缺少激活公共知识快照时安全失败，资料完整时仅进入 `queued`，不伪造模型完成。
+- 受信任执行器可将最终回答、引用、信息缺口和助手消息同事务写入；引用必须属于本次证据清单，私有推理不保存也不对外返回。
+- 工作台接入运行读取契约与状态、证据、缺口、错误和已持久化最终回答展示；真实模式须先创建会话并填写匿名化问题。
+
+影响模块：Query Run、Conversation Message、Knowledge Snapshot Resolver、MySQL Migration、OpenAPI Contract、Web Cases Workspace。
+
+## 2026-09-02 - 工作台会话软删除与恢复
+
+- 新增会话软删除和恢复接口；仅会话发起人或机构管理员可操作，并复用事项写权限和租户隔离校验。
+- 已删除会话保留消息与审计记录，但禁止继续读取上下文、读取消息或追加消息；恢复后方可继续使用。
+- 工作台为当前会话提供删除/恢复确认、状态反馈和已删除禁用态；预览模式仅使用虚构数据验证交互。
+
+影响模块：Conversation API、Conversation Service、MySQL Migration、OpenAPI Contract、Web Cases Workspace。
+
 ## 2026-09-02 - 前端第 14 步受控资料导入接入
 
 - 知识运营页接入既有本地资料导入接口，要求关联已登记来源、文件与必要政策元数据，并以 multipart 提交。

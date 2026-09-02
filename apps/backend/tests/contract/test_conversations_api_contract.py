@@ -14,5 +14,10 @@ def test_openapi_contains_conversation_message_and_context_routes(tmp_path: Path
     assert "/api/v1/cases/{case_id}/conversations" in schema["paths"]
     assert "/api/v1/conversations/{conversation_id}/messages" in schema["paths"]
     assert "/api/v1/conversations/{conversation_id}/context" in schema["paths"]
+    lifecycle_path = schema["paths"]["/api/v1/conversations/{conversation_id}"]
+    assert "delete" in lifecycle_path
+    restore_path = schema["paths"]["/api/v1/conversations/{conversation_id}/restore"]
+    assert "post" in restore_path
     assert "idempotency_key" in str(schema["components"]["schemas"])
     assert "memory_source" in str(schema["components"]["schemas"])
+    assert "deleted_at" in schema["components"]["schemas"]["ConversationData"]["properties"]

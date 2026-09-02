@@ -28,6 +28,20 @@ class KnowledgeSnapshotService:
     def __init__(self, *, uow_factory: SnapshotUowFactory) -> None:
         self._uow_factory = uow_factory
 
+    async def resolve_active_snapshot_ids(self, org_id: str) -> tuple[str | None, str | None]:
+        async with self._uow_factory() as uow:
+            repository = uow.repository
+            if repository is None:
+                raise RuntimeError("unit of work repository is unavailable")
+            public = await repository.get_active_snapshot(snapshot_type="public", org_id=None)
+            organization = await repository.get_active_snapshot(
+                snapshot_type="organization", org_id=org_id
+            )
+            return (
+                public.id if public is not None else None,
+                organization.id if organization is not None else None,
+            )
+
     async def materialize_validated_batch(
         self, batch_id: str, *, request_id: str, principal: Principal
     ) -> MaterializedSnapshot:

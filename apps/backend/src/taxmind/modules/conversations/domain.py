@@ -16,6 +16,7 @@ class ConversationRecord:
     summary_version: int
     created_at: datetime
     updated_at: datetime
+    deleted_at: datetime | None = None
 
 
 @dataclass(frozen=True, slots=True)
